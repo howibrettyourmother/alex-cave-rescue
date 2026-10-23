@@ -161,7 +161,7 @@ addEventListener('keyup',function(e){var k=KM[e.key];if(k)keys[k]=0});
 function inp(k){return btn[k]||keys[k]}
 // ---------- UI hit areas ----------
 var UI=[];
-function uiTap(x,y,enter){if(mode==='play'){if(x>SW-80&&y<70){mode='pause';sfx('cp')}return}
+function uiTap(x,y,enter){if(mode==='play'){if(x>SW-80&&y<70){mode='pause';sfx('cp')}else quizTap(x,y);return}
  for(var i=0;i<UI.length;i++){var u=UI[i];if(enter?u.def:(x>=u.x&&x<=u.x+u.w&&y>=u.y&&y<=u.y+u.h)){u.fn();return}}}
 // ---------- update ----------
 function hurt(n,kx){if(P.inv>0||P.dash>0)return;P.hp-=n;P.inv=1.4;P.vy=-420;P.vx=(kx||-P.face)*260;sfx('hurt');shake=.25;flash=.2;
@@ -178,8 +178,19 @@ function moveY(o,dy){var prevB=o.y;o.y+=dy;var l=o.x-o.w/2+3,r=o.x+o.w/2-3;o.on=
  if(dy>=0){var cl=tileAt(l,o.y),cr=tileAt(r,o.y);var oneway=function(c){return c==='='&&Math.floor(prevB/TS)<Math.floor(o.y/TS)+1&&prevB<=Math.floor(o.y/TS)*TS+1};
   if(solid(cl)||solid(cr)||oneway(cl)||oneway(cr)){var ty=Math.floor(o.y/TS)*TS;if(prevB<=ty+16||solid(cl)||solid(cr)){o.y=ty;o.vy=0;o.on=true;if(o===P&&(cl==='m'||cr==='m')){o.vy=-1150;o.on=false;sfx('bounce');burst(o.x,o.y,'#ff7ab8',12)}}}}
  else{var t=o.y-o.h;if(solid(tileAt(l,t))||solid(tileAt(r,t))){o.y=Math.floor(t/TS+1)*TS+o.h;o.vy=0;if(o===P)bumpHead()}}}
+// Number blocks are NOT map tiles, so they need their own collision. Generous kid-sized hitboxes:
+// head-bonk from below, landing on top, or touching from the side all select the block.
+function quizCollide(){if(!P||!L)return;var M=14,pl=P.x-P.w/2,pr=P.x+P.w/2,pt=P.y-P.h,pb=P.y;
+ L.quizzes.forEach(function(q){if(q.solved)return;q.blocks.forEach(function(bk){if(q.solved)return;
+  var l=bk.x-M,r=bk.x+TS+M,t=bk.y-M,b=bk.y+TS+M;if(pr<l||pl>r||pb<t||pt>b)return;
+  if(P.vy<0&&pt>bk.y+TS*.4){P.y=bk.y+TS+P.h;P.vy=0}            // bonk from below: stop upward motion
+  else if(P.vy>=0&&pb<=bk.y+TS*.5){P.y=bk.y;P.vy=0;P.on=true;P.coy=.1;P.jumps=0} // landed on top: stand on it
+  answer(q,bk)})})}
+function quizTap(x,y){if(!L)return false;var wx=x/SC+cam,wy=(y-GY)/SC,hit=false;
+ L.quizzes.forEach(function(q){if(q.solved||hit)return;q.blocks.forEach(function(bk){if(hit||q.solved)return;
+  if(wx>bk.x-24&&wx<bk.x+TS+24&&wy>bk.y-24&&wy<bk.y+TS+24){hit=true;answer(q,bk)}})});return hit}
 function bumpHead(){L.quizzes.forEach(function(q){if(q.solved)return;q.blocks.forEach(function(bk){if(P.x>bk.x-6&&P.x<bk.x+54&&Math.abs(P.y-P.h-(bk.y+48))<20)answer(q,bk)})})}
-function answer(q,bk){if(bk.bump>0)return;bk.bump=.3;if(bk.v===q.ans){openQuiz(q)}else{bk.bad=.6;sfx('wrong');pop('Try again!',bk.x+24,bk.y-10)}}
+function answer(q,bk){if(bk.bump>0||bk.cool>0||q.solved)return;bk.bump=.3;if(bk.v===q.ans){sfx('gem');openQuiz(q)}else{bk.bad=.6;bk.cool=1;sfx('wrong');pop('Try again! 🙂',bk.x+24,bk.y-10)}}
 function update(dt){time+=dt;if(shake>0)shake-=dt;if(flash>0)flash-=dt;
  var Z=L.Z,acc=P.on?2600:1800,mx=300,dir=(inp('r')?1:0)-(inp('l')?1:0);
  if(P.dashCd>0)P.dashCd-=dt;if(P.fireCd>0)P.fireCd-=dt;if(P.inv>0)P.inv-=dt;if(P.buf>0)P.buf-=dt;
@@ -193,6 +204,7 @@ function update(dt){time+=dt;if(shake>0)shake-=dt;if(flash>0)flash-=dt;
  if(P.buf>0){if(P.coy>0){P.vy=-770;P.coy=0;P.buf=0;P.jumps=1;sfx('jump');P.ride=null}else if(has('dj')&&P.jumps<2){P.vy=-700;P.jumps=2;P.buf=0;sfx('dj');burst(P.x,P.y,'#fff',10)}}
  if(P.ride){P.x+=P.ride.dx}
  moveX(P,P.vx*dt);var wasOn=P.on;moveY(P,P.vy*dt);
+ quizCollide();
  // rafts
  P.ride=null;L.rafts.forEach(function(r){var nx=r.x+r.vx*dt;if(nx<r.x0||nx+r.w>r.x1+TS)r.vx=-r.vx;r.dx=r.vx*dt;r.x+=r.dx;
   if(P.vy>=0&&P.x>r.x-8&&P.x<r.x+r.w+8&&P.y>=r.y-4&&P.y<=r.y+22){P.y=r.y;P.vy=0;P.on=true;P.ride=r}});
@@ -206,7 +218,7 @@ function update(dt){time+=dt;if(shake>0)shake-=dt;if(flash>0)flash-=dt;
  L.cps.forEach(function(c,i){if(!c.on&&Math.abs(P.x-c.x)<40&&Math.abs(P.y-c.y)<90){c.on=true;sfx('cp');P.hp=P.max;pop('Checkpoint! ❤️',c.x,c.y-110);SAVE.cp={z:L.zi,i:i};save();burst(c.x,c.y-60,'#7f7',20)}});
  // doors
  L.doors.forEach(function(d){if(!d.open&&Math.abs(P.x-(d.x*TS+24))<70){if(zgems>=d.need)openDoor(d);else if(!d.msgT||time>d.msgT){d.msgT=time+2;pop('Need '+d.need+' 💎! You have '+zgems,d.x*TS,(d.gt-4)*TS);sfx('wrong')}}});
- L.quizzes.forEach(function(q){q.blocks.forEach(function(bk){if(bk.bump>0)bk.bump-=dt;if(bk.bad>0)bk.bad-=dt})});
+ L.quizzes.forEach(function(q){q.blocks.forEach(function(bk){if(bk.bump>0)bk.bump-=dt;if(bk.bad>0)bk.bad-=dt;if(bk.cool>0)bk.cool-=dt})});
  // entities
  for(var i=L.ents.length-1;i>=0;i--){var e=L.ents[i];if(Math.abs(e.x-P.x)>VW*1.2&&e.t!=='gem')continue;
   if(e.t==='slime'){e.ph+=dt;var nx=e.x+e.vx*dt,ahead=tileAt(nx+Math.sign(e.vx)*18,e.y+30),wall=tileAt(nx+Math.sign(e.vx)*18,e.y);if(!solid(ahead)&&ahead!=='='||solid(wall))e.vx=-e.vx;else e.x=nx}
@@ -346,7 +358,7 @@ function drawWorld(){var Z=L.Z,x0=Math.floor(cam/TS)-1,x1=Math.ceil((cam+VW)/TS)
   cx.fillStyle='rgba(255,255,255,.92)';rr(qx-10,qy-30,Math.max(tw,9*TS),46,12);cx.fill();cx.fillStyle='#223';cx.fillText(q.text,qx+5,qy+4);
   q.blocks.forEach(function(bk){var by=bk.y-(bk.bump>0?Math.sin(bk.bump*10)*8:0),sx=bk.bad>0?Math.sin(time*60)*4:0;cx.fillStyle=bk.bad>0?'#e55':'#ffc93c';rr(bk.x+sx,by,TS,TS,8);cx.fill();cx.strokeStyle='#a06b00';cx.lineWidth=3;cx.stroke();
    cx.fillStyle='#402';cx.textAlign='center';cx.font='bold 28px sans-serif';cx.fillText(String(bk.v),bk.x+24+sx,by+34)});
-  cx.fillStyle='rgba(255,255,255,.8)';cx.font='bold 18px sans-serif';cx.textAlign='center';cx.fillText('Jump & bonk the answer! ⬆',(q.x-4.5)*TS,(q.gt-2.6)*TS+70>q.gt*TS?(q.gt-0.3)*TS:(q.gt-2.6)*TS)});
+  cx.fillStyle='rgba(255,255,255,.8)';cx.font='bold 18px sans-serif';cx.textAlign='center';cx.fillText('Bonk, stand on, or tap the answer! ⬆',(q.x-4.5)*TS,(q.gt-2.6)*TS+70>q.gt*TS?(q.gt-0.3)*TS:(q.gt-2.6)*TS)});
  L.doors.forEach(function(d){if(d.open)return;cx.fillStyle='rgba(0,0,0,.55)';rr(d.x*TS-40,(d.gt-5)*TS,128,40,10);cx.fill();cx.fillStyle='#fff';cx.font='bold 24px sans-serif';cx.textAlign='center';cx.fillText(Math.min(zgems,d.need)+' / '+d.need+' 💎',d.x*TS+24,(d.gt-5)*TS+29)});
  L.cps.forEach(function(c){cx.fillStyle='#ddd';cx.fillRect(c.x-3,c.y-80,6,80);cx.fillStyle=c.on?'#3c3':'#c33';cx.beginPath();cx.moveTo(c.x+3,c.y-80);cx.lineTo(c.x+40,c.y-66);cx.lineTo(c.x+3,c.y-52);cx.fill()});
  L.rafts.forEach(function(r){cx.fillStyle='#7a4a22';rr(r.x,r.y,r.w,r.h,8);cx.fill();drawChicken(r.x+r.w/2,r.y-2+Math.sin(time*8)*2,1.4,false);cx.fillStyle='#fff';cx.font='bold 14px sans-serif';cx.textAlign='center';cx.fillText('🐔 ride!',r.x+r.w/2,r.y+44)});
@@ -446,5 +458,5 @@ window.__C={start:function(z){startZone(z,false)},toBoss:function(z){if(L===null
  hitBoss:function(n){if(boss){boss.inv=0;hitBoss(n||1)}},boss:function(){return boss&&{type:boss.type,hp:boss.hp,phase:boss.phase,st:boss.st}},
  state:function(){return {mode:mode,card:card&&card.k,zone:L&&L.zi,hp:P&&P.hp,gems:zgems,save:SAVE,x:P&&P.x}},tap:function(){uiTap(-1,-1,true)},
  unlock:function(n){SAVE.unlocked=n;save()},reset:function(){localStorage.removeItem(SAVEKEY);location.reload()},solveAll:function(){L.quizzes.forEach(function(q){openQuiz(q,true)});L.doors.forEach(function(d){openDoor(d,true)})},
- tele:function(tx){P.x=tx*TS;P.y=2*TS;P.vy=0},chicken:function(){var c=L.ents.filter(function(e){return e.t==='chicken'})[0];if(c){P.x=c.x;P.y=c.y+20}}};
+ btns:function(){return BTNS.map(function(b){return [b.id,b.x,b.y]})},qst:function(i){var q=L.quizzes[i];return {solved:!!q.solved,bad:q.blocks.some(function(b){return b.bad>0||b.cool>0}),gate:L.m[5][q.x]}},qinfo:function(){return L.quizzes.map(function(q){return {solved:!!q.solved,ans:q.ans,gx:q.x,blocks:q.blocks.map(function(b){return {x:b.x,y:b.y,v:b.v,sx:(b.x+24-cam)*SC,sy:GY+(b.y+24)*SC}})}})},place:function(x,y){P.x=x;P.y=y;P.vx=0;P.vy=0;P.inv=0},tele:function(tx){P.x=tx*TS;P.y=2*TS;P.vy=0},chicken:function(){var c=L.ents.filter(function(e){return e.t==='chicken'})[0];if(c){P.x=c.x;P.y=c.y+20}}};
 })();
