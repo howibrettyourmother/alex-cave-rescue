@@ -7,7 +7,7 @@
 <style>html,body{margin:0;height:100%;overflow:hidden;background:#1c1430;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 canvas{display:block;position:fixed;left:0;top:0;touch-action:none}</style></head><body><canvas id="c"></canvas>
 <script>/*GAME*/</script>
-<script>if('serviceWorker' in navigator&&location.protocol==='https:'){addEventListener('load',function(){navigator.serviceWorker.register('sw.js?v=1.1.3-20261023m').catch(function(){})})}</script>
+<script>if('serviceWorker' in navigator&&location.protocol==='https:'){addEventListener('load',function(){navigator.serviceWorker.register('sw.js?v=1.1.4-20261023n').catch(function(){})})}</script>
 <script>/*hub-home*/(function(){var own='alex',k;try{k=localStorage.kidsHub}catch(e){}if(k!=='zoe'&&k!=='alex')k=own;
 var u=k==='zoe'?'/doodle-and-zoe/':'/alex-games/',b=document.createElement('div');b.id='hubHome';b.setAttribute('role','button');b.setAttribute('aria-label','hold to go home');
 b.innerHTML='<svg width="38" height="38" viewBox="0 0 38 38" style="position:absolute;left:0;top:0;pointer-events:none"><circle cx="19" cy="19" r="16" fill="none" stroke="#ffd54a" stroke-width="4" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="100.5" transform="rotate(-90 19 19)"/></svg><span style="position:relative;pointer-events:none">🏠</span>';
@@ -28,4 +28,8 @@ b.addEventListener('mousedown',down);b.addEventListener('mouseup',up);b.addEvent
 ['pointerdown','pointerup','click'].forEach(function(n){b.addEventListener(n,stop)});
 function add(){document.body.appendChild(b);document.body.appendChild(hint)}if(document.body)add();else addEventListener('DOMContentLoaded',add)})();</script>
 <script>/*bgm*/window.BGM_CFG={"id":"alex-cave-rescue","base":"music/","v":"20261023m","tracks":{"title":[120.0,1.0],"z0":[115.2,1.0],"z1":[106.666667,1.0],"z2":[102.857143,1.0],"z3":[114.285714,1.0],"z4":[92.903226,1.0],"boss":[77.837838,1.0],"magmor1":[83.478261,1.0],"magmor2":[83.478261,1.0],"magmor3":[83.478261,1.0],"win":[92.903226,1.0]},"map":{},"pos":"left:10px;top:58px","sync":["magmor1","magmor2","magmor3"],"poll":function(){var c=window.__C;if(!c||!c.state)return{};var s=c.state(),b=c.boss&&c.boss(),a='title';if(s.mode==='card')a=(s.card==='rescue'||s.card==='power')?'win':(s.card==='story'?'title':'z'+s.zone);else if(s.mode==='play'||s.mode==='pause'){a='z'+s.zone;if(b&&b.hp>0)a=s.zone===4?'magmor'+Math.max(1,Math.min(3,b.phase||1)):'boss'}return{area:a,muted:s.muted}}};</script><script src="music/bgm.js?v=20261023m" defer></script>
+<script>/*sw-reload*/(function(){if(!('serviceWorker' in navigator))return;var sw=navigator.serviceWorker,had=!!sw.controller,done=false;
+sw.addEventListener('controllerchange',function(){if(!had){had=true;return}if(done)return;done=true;try{if(sessionStorage.swReloaded&&Date.now()-sessionStorage.swReloaded<10000)return;sessionStorage.swReloaded=Date.now()}catch(e){}location.reload()});
+function up(){if(sw.getRegistration)sw.getRegistration().then(function(g){if(g)g.update()}).catch(function(){})}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')up()});})();</script>
 </body></html>
