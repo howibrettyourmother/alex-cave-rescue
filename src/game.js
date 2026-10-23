@@ -122,8 +122,9 @@ var mode='title',P=null,cam=0,shake=0,parts=[],pops=[],fbs=[],shots=[],boss=null
 function newPlayer(x,y){return {x:x,y:y,w:30,h:52,vx:0,vy:0,on:false,face:1,jumps:0,hp:5,max:5,inv:0,dash:0,dashCd:0,fireCd:0,coy:0,buf:0,air:0,ride:null,walk:0}}
 function startZone(zi,fromCp){L=build(zi);mode='play';boss=null;parts=[];pops=[];fbs=[];shots=[];zgems=0;card=null;
  var sx=L.start[0]*TS+24,sy=L.start[1]*TS;
- if(fromCp&&SAVE.cp&&SAVE.cp.z===zi){var c=L.cps[SAVE.cp.i];if(c){sx=c.x;sy=c.y-60;for(var i=0;i<=SAVE.cp.i;i++)L.cps[i].on=true;
-   L.quizzes.forEach(function(q){if(q.x*TS<sx)openQuiz(q,true)});L.doors.forEach(function(d){if(d.x*TS<sx)openDoor(d,true)})}}
+ if(fromCp&&SAVE.cp&&SAVE.cp.z===zi){var c=L.cps[SAVE.cp.i];if(c){sx=c.x;sy=c.y-60;for(var i=0;i<=SAVE.cp.i;i++)L.cps[i].on=true}}
+ var rs=SAVE.res;if(fromCp&&rs&&rs.z===zi&&rs.x>sx&&rs.x<(L.arena.x0-1)*TS){sx=rs.x;sy=rs.y-4;zgems=rs.g||0;L.cps.forEach(function(c){if(c.x<sx)c.on=true})}
+ SAVE.res=null;if(sx>L.start[0]*TS+24){L.quizzes.forEach(function(q){if(q.x*TS<sx)openQuiz(q,true)});L.doors.forEach(function(d){if(d.x*TS<sx)openDoor(d,true)})}
  P=newPlayer(sx,sy);cam=Math.max(0,P.x-VW/3);
  if(zi===0&&!SAVE.story){card={k:'story'};mode='card'}}
 function openQuiz(q,silent){q.solved=true;for(var y=1;y<q.gt;y++)L.m[y][q.x]='.';if(!silent){sfx('door');burst(q.x*TS+24,(q.gt-3)*TS,'#ffe066',30);pop('Correct! 🎉',q.x*TS,(q.gt-5)*TS)}}
@@ -152,6 +153,8 @@ cv.addEventListener('touchend',tend,{passive:false});cv.addEventListener('touchc
 var mouseId=null;cv.addEventListener('mousedown',function(e){ac();if(mode!=='play'){uiTap(e.clientX,e.clientY);return}var id=hitBtn(e.clientX,e.clientY);if(id){touches.m=id;syncTouches()}else uiTap(e.clientX,e.clientY)});
 addEventListener('mouseup',function(){delete touches.m;syncTouches()});
 function clearIn(){touches={};keys={};btn={l:0,r:0,j:0,d:0,f:0}}
+function hubSave(){try{if(L&&P&&(mode==='play'||mode==='pause')&&!boss&&P.on&&P.hp>0&&P.x<(L.arena.x0-1)*TS){SAVE.res={z:L.zi,x:P.x,y:P.y,g:zgems}}save()}catch(e){}}
+window.hubSave=hubSave;addEventListener('hubsave',hubSave);addEventListener('pagehide',hubSave);document.addEventListener('visibilitychange',function(){if(document.hidden)hubSave()});
 addEventListener('blur',clearIn);addEventListener('pagehide',clearIn);document.addEventListener('visibilitychange',function(){clearIn();if(document.hidden&&mode==='play')mode='pause'});
 var KM={ArrowLeft:'l',a:'l',A:'l',ArrowRight:'r',d:'r',D:'r',ArrowUp:'j',' ':'j',w:'j',W:'j',x:'d',X:'d',Shift:'d',z:'f',Z:'f',f:'f',F:'f'};
 addEventListener('keydown',function(e){ac();var k=KM[e.key];if(e.key==='Enter'||(mode!=='play'&&e.key===' ')){uiTap(-1,-1,true);e.preventDefault();return}
@@ -400,7 +403,7 @@ function drawBoss(){var B=boss,x=B.x,y=B.y,w=B.w,h=B.h,T=B.type;cx.save();if(B.i
  if(T==='bat'&&(B.st==='tele'||B.st==='swoop')){var F2=bossFloor(),pu=.5+.5*Math.sin(time*14);cx.globalAlpha=1;cx.strokeStyle='rgba(255,60,60,'+(.5+pu*.5)+')';cx.lineWidth=6;cx.beginPath();cx.ellipse(B.tx,F2-6,70,16,0,0,6.3);cx.stroke();cx.fillStyle='rgba(255,60,60,.25)';cx.fill();cx.fillStyle='#fff';cx.font='bold 26px sans-serif';cx.textAlign='center';cx.fillText('⚠ MOVE!',B.tx,F2-30)}
  if(B.st==='roar'||B.st==='tele'||B.st==='squat'||B.st==='drop'){cx.fillStyle='#fff';cx.font='bold 40px sans-serif';cx.textAlign='center';cx.fillText('❗',x,y-h-30)}
  cx.restore()}
-function hud(){var s=Math.max(.75,Math.min(1.3,(PORT?SW:SH)/700)),x=PORT?12:62,y=PORT?Math.max(8,GY-26):12;cx.font=(26*s)+'px sans-serif';cx.textAlign='left';cx.textBaseline='top';
+function hud(){var s=Math.max(.75,Math.min(1.3,(PORT?SW:SH)/700)),x=PORT?54:62,y=PORT?Math.max(8,GY-26):12;cx.font=(26*s)+'px sans-serif';cx.textAlign='left';cx.textBaseline='top';
  var hs='';for(var i=0;i<Math.max(P.max,P.hp);i++)hs+=i<P.hp?(i>=P.max?'💛':'❤️'):'🤍';cx.fillText(hs,x,y);
  cx.fillStyle='#fff';cx.strokeStyle='#000';cx.lineWidth=4;var t='💎 '+zgems+'   '+L.Z.name;cx.font='bold '+(20*s)+'px sans-serif';cx.strokeText(t,x,y+34*s);cx.fillText(t,x,y+34*s);
  var pw='';POWERS.slice(0,4).forEach(function(p){if(has(p.id))pw+=p.icon});cx.font=(22*s)+'px sans-serif';cx.fillText(pw,x,y+62*s);
@@ -423,7 +426,7 @@ function title(){bg('#1c1430','#4a1e10');var u=Math.min(SW,SH*1.4)/900;
   cx.font=(bw*.38)+'px sans-serif';cx.textAlign='center';cx.fillStyle='#fff';cx.fillText(lock?'🔒':['💎','🍄','🕷️','❄️','🌋'][i],x+bw/2,gy+bw*.5);
   txt((i+1)+'. '+Z.name.split(' ')[0],x+bw/2,gy+bw*.8,bw*.14);if(done)txt(POWERS[i].icon,x+bw/2,gy+bw*1.05,bw*.18);
   if(!lock)UI.push({x:x,y:gy,w:bw,h:bw*1.15,fn:function(){startZone(i,true);sfx('door')}})});
- var cz=Math.min(SAVE.unlocked,4);button(SAVE.unlocked||SAVE.cp?'▶ PLAY: '+ZONES[cz].name:'▶ START ADVENTURE',gc-Math.min(260,SW*.4),gy+bw*1.15+(PORT?SH*.04:0)+SH*.06,Math.min(520,SW*.8),Math.min(80,SH*.11),function(){startZone(cz,true);sfx('door')},null,true);
+ var cz=SAVE.res?SAVE.res.z:SAVE.cp?SAVE.cp.z:Math.min(SAVE.unlocked,4);button(SAVE.unlocked||SAVE.cp||SAVE.res?(SAVE.res||SAVE.cp?'▶ CONTINUE: ':'▶ PLAY: ')+ZONES[cz].name:'▶ START ADVENTURE',gc-Math.min(260,SW*.4),gy+bw*1.15+(PORT?SH*.04:0)+SH*.06,Math.min(520,SW*.8),Math.min(80,SH*.11),function(){startZone(cz,true);sfx('door')},null,true);
  var r=(SAVE.mom?'Mom rescued 💖  ':'Mom: find her in the Spider Depths  ')+(SAVE.dad?'Dad rescued 💙':'Dad: find him in the Lava Core');if(PORT){var rp=r.split('  ');txt(rp[0],SW/2,SH-58,Math.min(22,SW/22));txt(rp[1]||'',SW/2,SH-28,Math.min(22,SW/22))}else txt(r,SW/2,SH-28,Math.min(22,SW/34));
  if(SAVE.won)txt('🏆 CAVE HERO! Play any zone again!',SW/2,SH-60,Math.min(24,SW/30),'#ffd23f')}
 function drawCard(dt){var c=card;c.t=(c.t||0)+dt;bg('rgba(10,5,20,1)','#2a1440');var u=Math.min(SW,SH*1.3)/900,cy=SH*.5;
