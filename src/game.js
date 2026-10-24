@@ -84,15 +84,19 @@ function shuffle3(ans,alts){var o=[ans];for(var i=0;i<alts.length&&o.length<3;i+
  while(o.length<3){var v=ans+rnd(-3,3);if(v>=0&&o.indexOf(v)<0)o.push(v)}
  for(i=2;i>0;i--){var j=rnd(0,i),t=o[i];o[i]=o[j];o[j]=t}return o}
 function makeQuiz(k){var a,b2,q={kind:k,solved:false};
- if(k==='add'){a=rnd(1,4);b2=rnd(1,4);q.text=a+' + '+b2+' = ?';q.ans=a+b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-1])}
- else if(k==='add2'){a=rnd(3,6);b2=rnd(2,5);q.text=a+' + '+b2+' = ?';q.ans=a+b2;q.opts=shuffle3(q.ans,[q.ans+2,q.ans-1])}
- else if(k==='sub'){a=rnd(5,9);b2=rnd(1,4);q.text=a+' − '+b2+' = ?';q.ans=a-b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-2])}
- else if(k==='count'){a=rnd(3,7);q.text='How many? '+new Array(a+1).join('🍄');q.ans=a;q.opts=shuffle3(a,[a+1,a-1])}
+ if(k==='add'){a=rnd(4,9);b2=rnd(3,9);q.text=a+' + '+b2+' = ?';q.vo=['n'+a,'plus','n'+b2,'equals_what'];q.ans=a+b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-1])}
+ else if(k==='add2'){a=rnd(2,5);b2=rnd(2,5);q.text=a+' × '+b2+' = ?';q.vo=['n'+a,'times','n'+b2,'equals_what'];q.ans=a*b2;q.opts=shuffle3(q.ans,[q.ans+2,q.ans-1])}
+ else if(k==='sub'){a=rnd(12,20);b2=rnd(3,9);q.text=a+' − '+b2+' = ?';q.vo=['n'+a,'minus','n'+b2,'equals_what'];q.ans=a-b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-2])}
+ else if(k==='count'){a=rnd(2,6);q.text='How many? '+new Array(a+1).join('🍄🍄');q.vo=['how_many'];a*=2;q.ans=a;q.opts=shuffle3(a,[a+1,a-1])}
  else {var P=[['🔴','🔵'],['⭐','🌙'],['🟢','🟡','🟣']][rnd(0,2)],seq=[];for(var i=0;i<5;i++)seq.push(P[i%P.length]);
-  q.text='What comes next? '+seq.join('')+'❓';q.ans=P[5%P.length];var o=P.slice();if(o.length<3)o.push('🟠');
+  q.text='What comes next? '+seq.join('')+'❓';q.vo=['what_next'];q.ans=P[5%P.length];var o=P.slice();if(o.length<3)o.push('🟠');
   q.opts=o.sort(function(){return Math.random()-.5})}
  return q}
-// ---------- audio (synthesized SFX only, no speech) ----------
+// ---------- spoken quiz prompts: natural pre-recorded clips (voice/*.mp3, src/genvoice.sh), chained ----------
+var VB={};function vLoad(k){if(VB[k])return VB[k];var a=ac();VB[k]=new Promise(function(res){if(!a)return res(null);var x=new XMLHttpRequest();x.open('GET','voice/'+k+'.mp3');x.responseType='arraybuffer';
+ x.onload=function(){try{a.decodeAudioData(x.response,res,function(){res(null)})}catch(e){res(null)}};x.onerror=function(){res(null)};x.send()});return VB[k]}
+function sayQuiz(q){var a=ac();if(!a||muted||!q.vo)return;Promise.all(q.vo.map(vLoad)).then(function(bs){var t=a.currentTime+.05;bs.forEach(function(b){if(!b)return;var s=a.createBufferSource(),g=a.createGain();g.gain.value=1.1;s.buffer=b;s.connect(g);g.connect(a.destination);s.start(t);t+=b.duration+.06})})}
+// ---------- audio (synthesized SFX + recorded quiz prompts) ----------
 var AC=null,lastS={},voices=0,jingleUntil=0,muted=false;
 function ac(){try{if(!AC){var A=window.AudioContext||window.webkitAudioContext;if(!A)return null;AC=new A()}if(AC.state==='suspended')AC.resume()}catch(e){}return AC}
 function tone(f,d,type,vol,f2,del){var a=ac();if(!a||muted)return;var t=a.currentTime+(del||0),o=a.createOscillator(),g=a.createGain();
@@ -221,6 +225,7 @@ function update(dt){time+=dt;if(shake>0)shake-=dt;if(flash>0)flash-=dt;
  L.cps.forEach(function(c,i){if(!c.on&&Math.abs(P.x-c.x)<40&&Math.abs(P.y-c.y)<90){c.on=true;sfx('cp');P.hp=P.max;pop('Checkpoint! ❤️',c.x,c.y-110);SAVE.cp={z:L.zi,i:i};save();burst(c.x,c.y-60,'#7f7',20)}});
  // doors
  L.doors.forEach(function(d){if(!d.open&&Math.abs(P.x-(d.x*TS+24))<70){if(zgems>=d.need)openDoor(d);else if(!d.msgT||time>d.msgT){d.msgT=time+2;pop('Need '+d.need+' 💎! You have '+zgems,d.x*TS,(d.gt-4)*TS);sfx('wrong')}}});
+ L.quizzes.forEach(function(q){if(!q.solved&&!q.said&&Math.abs(P.x-q.x*TS)<10*TS){q.said=1;sayQuiz(q)}});
  L.quizzes.forEach(function(q){q.blocks.forEach(function(bk){if(bk.bump>0)bk.bump-=dt;if(bk.bad>0)bk.bad-=dt;if(bk.cool>0)bk.cool-=dt})});
  // entities
  for(var i=L.ents.length-1;i>=0;i--){var e=L.ents[i];if(Math.abs(e.x-P.x)>VW*1.2&&e.t!=='gem')continue;
@@ -257,7 +262,7 @@ function throwFire(){var vx=P.face*560,vy=0;var tgt=null,bd=1e9;
  if(tgt){var dx=tgt.x-P.x,dy=tgt.y-(P.y-30),d=Math.sqrt(dx*dx+dy*dy)||1;if(dx*P.face>0||boss){vx=dx/d*600;vy=dy/d*600;if(boss)P.face=dx>0?1:-1}}
  fbs.push({x:P.x+P.face*18,y:P.y-30,vx:vx,vy:vy,life:1.4});sfx('fire')}
 // ---------- bosses ----------
-var BDEF={golem:{hp:3,w:110,h:130},bat:{hp:2,w:120,h:80},spider:{hp:3,w:110,h:80},yeti:{hp:4,w:110,h:140},magmor:{hp:15,w:150,h:170}};
+var BDEF={golem:{hp:4,w:110,h:130},bat:{hp:3,w:120,h:80},spider:{hp:4,w:110,h:80},yeti:{hp:5,w:110,h:140},magmor:{hp:18,w:150,h:170}};
 function spawnBoss(){var A=L.arena,d=BDEF[L.Z.boss];boss={type:L.Z.boss,hp:d.hp,max:d.hp,w:d.w,h:d.h,x:(A.x1-3)*TS,y:A.t*TS,st:'intro',t:1.6,vx:0,vy:0,inv:0,phase:1,face:-1,dizzy:0};
  if(boss.type==='bat'||boss.type==='spider'){boss.y=3*TS}
  sfx('roar');shake=.6;pop(L.Z.bossName+'!',boss.x,4*TS,true)}
