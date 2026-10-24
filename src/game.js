@@ -95,10 +95,17 @@ function makeQuiz(k){var a,b2,q={kind:k,solved:false};
 // ---------- spoken quiz prompts: natural pre-recorded clips (voice/*.mp3, src/genvoice.sh), chained ----------
 var VB={};function vLoad(k){if(VB[k])return VB[k];var a=ac();VB[k]=new Promise(function(res){if(!a)return res(null);var x=new XMLHttpRequest();x.open('GET','voice/'+k+'.mp3');x.responseType='arraybuffer';
  x.onload=function(){try{a.decodeAudioData(x.response,res,function(){res(null)})}catch(e){res(null)}};x.onerror=function(){res(null)};x.send()});return VB[k]}
-function sayQuiz(q){var a=ac();if(!a||muted||!q.vo)return;Promise.all(q.vo.map(vLoad)).then(function(bs){var t=a.currentTime+.05;bs.forEach(function(b){if(!b)return;var s=a.createBufferSource(),g=a.createGain();g.gain.value=1.1;s.buffer=b;s.connect(g);g.connect(a.destination);s.start(t);t+=b.duration+.06})})}
+// one prompt at a time (a new one cuts the old), and music ducks while it plays (bgm poll reads __vSpk)
+var vGen=0,vSrc=[],vEnd=0;window.__vSpk=function(){return !!AC&&AC.currentTime<vEnd};
+function hush(){vGen++;vEnd=0;vSrc.forEach(function(s){try{s.stop()}catch(e){}});vSrc=[]}
+function sayQuiz(q){var a=ac();if(!a||muted||!q.vo)return;hush();var gen=vGen;Promise.all(q.vo.map(vLoad)).then(function(bs){if(gen!==vGen)return;var t=a.currentTime+.05;bs.forEach(function(b){if(!b)return;var s=a.createBufferSource(),g=a.createGain();g.gain.value=1;s.buffer=b;s.connect(g);g.connect(a.destination);s.start(t);vSrc.push(s);t+=b.duration+.06});vEnd=t})}
 // ---------- audio (synthesized SFX + recorded quiz prompts) ----------
 var AC=null,lastS={},voices=0,jingleUntil=0,muted=false;
-function ac(){try{if(!AC){var A=window.AudioContext||window.webkitAudioContext;if(!A)return null;AC=new A()}if(AC.state==='suspended')AC.resume()}catch(e){}return AC}
+function ac(){try{if(!AC){var A=window.AudioContext||window.webkitAudioContext;if(!A)return null;AC=new A();AC.addEventListener('statechange',function(){if(AC.state==='interrupted')setTimeout(wake,300)})}if(AC.state!=='running'&&AC.state!=='closed'){var p=AC.resume();if(p&&p.catch)p.catch(function(){})}}catch(e){}return AC}
+// iOS: resume after an 'interrupted' state (call, Siri, background) on any touch or when the page comes back
+function wake(){if(AC&&!document.hidden&&AC.state!=='running'&&AC.state!=='closed'){try{var p=AC.resume();if(p&&p.catch)p.catch(function(){})}catch(e){}}}
+addEventListener('pageshow',wake);addEventListener('focus',wake);document.addEventListener('visibilitychange',function(){if(!document.hidden)wake()});
+['touchend','pointerdown','click'].forEach(function(e){document.addEventListener(e,function(){if(AC)ac()},{passive:true,capture:true})});
 function tone(f,d,type,vol,f2,del){var a=ac();if(!a||muted)return;var t=a.currentTime+(del||0),o=a.createOscillator(),g=a.createGain();
  o.type=type||'square';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);
  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol||.15,t+.01);g.gain.exponentialRampToValueAtTime(0.0001,t+d);
