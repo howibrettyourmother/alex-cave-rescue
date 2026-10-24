@@ -92,9 +92,9 @@ function shuffle3(ans,alts){var o=[ans];for(var i=0;i<alts.length&&o.length<3;i+
  while(o.length<3){var v=ans+rnd(-3,3);if(v>=0&&o.indexOf(v)<0)o.push(v)}
  for(i=2;i>0;i--){var j=rnd(0,i),t=o[i];o[i]=o[j];o[j]=t}return o}
 function makeQuiz(k){var a,b2,q={kind:k,solved:false};
- if(k==='add'){a=rnd(4,9);b2=rnd(3,9);q.text=a+' + '+b2+' = ?';q.vo=['n'+a,'plus','n'+b2,'equals_what'];q.ans=a+b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-1])}
- else if(k==='add2'){a=rnd(2,5);b2=rnd(2,5);q.text=a+' × '+b2+' = ?';q.vo=['n'+a,'times','n'+b2,'equals_what'];q.ans=a*b2;q.opts=shuffle3(q.ans,[q.ans+2,q.ans-1])}
- else if(k==='sub'){a=rnd(12,20);b2=rnd(3,9);q.text=a+' − '+b2+' = ?';q.vo=['n'+a,'minus','n'+b2,'equals_what'];q.ans=a-b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-2])}
+ if(k==='add'){a=rnd(4,9);b2=rnd(3,9);q.text=a+' + '+b2+' = ?';q.vo=['n'+a,'plus','n'+b2];q.ans=a+b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-1])}
+ else if(k==='add2'){a=rnd(2,5);b2=rnd(2,5);q.text=a+' × '+b2+' = ?';q.vo=['n'+a,'times','n'+b2];q.ans=a*b2;q.opts=shuffle3(q.ans,[q.ans+2,q.ans-1])}
+ else if(k==='sub'){a=rnd(12,20);b2=rnd(3,9);q.text=a+' − '+b2+' = ?';q.vo=['n'+a,'minus','n'+b2];q.ans=a-b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-2])}
  else if(k==='count'){a=rnd(2,6);q.text='How many? '+new Array(a+1).join('🍄🍄');q.vo=['how_many'];a*=2;q.ans=a;q.opts=shuffle3(a,[a+1,a-1])}
  else {var P=[['🔴','🔵'],['⭐','🌙'],['🟢','🟡','🟣']][rnd(0,2)],seq=[];for(var i=0;i<5;i++)seq.push(P[i%P.length]);
   q.text='What comes next? '+seq.join('')+'❓';q.vo=['what_next'];q.ans=P[5%P.length];var o=P.slice();if(o.length<3)o.push('🟠');
@@ -202,6 +202,7 @@ function quizCollide(){if(!P||!L)return;var M=14,pl=P.x-P.w/2,pr=P.x+P.w/2,pt=P.
   else if(P.vy>=0&&pb<=bk.y+TS*.5){P.y=bk.y;P.vy=0;P.on=true;P.coy=.1;P.jumps=0} // landed on top: stand on it
   answer(q,bk)})})}
 function quizTap(x,y){if(!L)return false;var wx=x/SC+cam,wy=(y-GY)/SC,hit=false;
+ L.quizzes.forEach(function(q){if(q.solved||hit)return;var qx=(q.x-8)*TS,qy=(q.gt-6.6)*TS;if(wx>qx-10&&wx<qx-10+Math.max(q.tw||0,9*TS)&&wy>qy-30&&wy<qy+16){hit=true;sayQuiz(q)}});if(hit)return true;
  L.quizzes.forEach(function(q){if(q.solved||hit)return;q.blocks.forEach(function(bk){if(hit||q.solved)return;
   if(wx>bk.x-24&&wx<bk.x+TS+24&&wy>bk.y-24&&wy<bk.y+TS+24){hit=true;answer(q,bk)}})});return hit}
 function bumpHead(){L.quizzes.forEach(function(q){if(q.solved)return;q.blocks.forEach(function(bk){if(P.x>bk.x-6&&P.x<bk.x+54&&Math.abs(P.y-P.h-(bk.y+48))<20)answer(q,bk)})})}
@@ -233,7 +234,6 @@ function update(dt){time+=dt;if(shake>0)shake-=dt;if(flash>0)flash-=dt;
  L.cps.forEach(function(c,i){if(!c.on&&Math.abs(P.x-c.x)<40&&Math.abs(P.y-c.y)<90){c.on=true;sfx('cp');P.hp=P.max;pop('Checkpoint! ❤️',c.x,c.y-110);SAVE.cp={z:L.zi,i:i};save();burst(c.x,c.y-60,'#7f7',20)}});
  // doors
  L.doors.forEach(function(d){if(!d.open&&Math.abs(P.x-(d.x*TS+24))<70){if(zgems>=d.need)openDoor(d);else if(!d.msgT||time>d.msgT){d.msgT=time+2;pop('Need '+d.need+' 💎! You have '+zgems,d.x*TS,(d.gt-4)*TS);sfx('wrong')}}});
- L.quizzes.forEach(function(q){if(!q.solved&&!q.said&&Math.abs(P.x-q.x*TS)<10*TS){q.said=1;sayQuiz(q)}});
  L.quizzes.forEach(function(q){q.blocks.forEach(function(bk){if(bk.bump>0)bk.bump-=dt;if(bk.bad>0)bk.bad-=dt;if(bk.cool>0)bk.cool-=dt})});
  // entities
  for(var i=L.ents.length-1;i>=0;i--){var e=L.ents[i];if(Math.abs(e.x-P.x)>VW*1.2&&e.t!=='gem')continue;
@@ -376,8 +376,8 @@ function drawWorld(){var Z=L.Z,x0=Math.floor(cam/TS)-1,x1=Math.ceil((cam+VW)/TS)
   else if(c==='L'){cx.fillStyle=y===10?'#ff6a00':'#d63a00';cx.fillRect(X,Y+(y===10?10+Math.sin(time*3+x)*4:0),TS,TS);if(y===10){cx.fillStyle='#ffd000';cx.fillRect(X,Y+10+Math.sin(time*3+x)*4,TS,5)}}
   else if(c==='h'){if(has('glow')){cx.fillStyle='rgba(255,240,120,'+(.55+Math.sin(time*4)*.2)+')';rr(X+2,Y+2,TS-4,18,6);cx.fill();cx.strokeStyle='#fff6a0';cx.lineWidth=2;cx.stroke()}}}
  // quizzes
- L.quizzes.forEach(function(q){if(q.solved)return;var qx=(q.x-8)*TS,qy=(q.gt-6.6)*TS;cx.font='bold 30px sans-serif';cx.textAlign='left';var tw=cx.measureText(q.text).width+30;
-  cx.fillStyle='rgba(255,255,255,.92)';rr(qx-10,qy-30,Math.max(tw,9*TS),46,12);cx.fill();cx.fillStyle='#223';cx.fillText(q.text,qx+5,qy+4);
+ L.quizzes.forEach(function(q){if(q.solved)return;var qx=(q.x-8)*TS,qy=(q.gt-6.6)*TS;cx.font='bold 30px sans-serif';cx.textAlign='left';var tw=cx.measureText(q.text).width+30;q.tw=tw;
+  cx.fillStyle='rgba(255,255,255,.92)';rr(qx-10,qy-30,Math.max(tw,9*TS),46,12);cx.fill();cx.fillStyle='#223';cx.fillText(q.text,qx+5,qy+4);if(q.vo){cx.font='24px sans-serif';cx.fillText('🔊',qx-10+Math.max(tw,9*TS)-34,qy+2)}
   q.blocks.forEach(function(bk){var by=bk.y-(bk.bump>0?Math.sin(bk.bump*10)*8:0),sx=bk.bad>0?Math.sin(time*60)*4:0;cx.fillStyle=bk.bad>0?'#e55':'#ffc93c';rr(bk.x+sx,by,TS,TS,8);cx.fill();cx.strokeStyle='#a06b00';cx.lineWidth=3;cx.stroke();
    cx.fillStyle='#402';cx.textAlign='center';cx.font='bold 28px sans-serif';cx.fillText(String(bk.v),bk.x+24+sx,by+34)});
   cx.fillStyle='rgba(255,255,255,.8)';cx.font='bold 18px sans-serif';cx.textAlign='center';cx.fillText('Bonk, stand on, or tap the answer! ⬆',(q.x-4.5)*TS,(q.gt-2.6)*TS+70>q.gt*TS?(q.gt-0.3)*TS:(q.gt-2.6)*TS)});
@@ -484,7 +484,7 @@ window.__C={start:function(z){startZone(z,false)},toBoss:function(z){if(L===null
  btns:function(){return BTNS.map(function(b){return [b.id,b.x,b.y]})},qst:function(i){var q=L.quizzes[i];return {solved:!!q.solved,bad:q.blocks.some(function(b){return b.bad>0||b.cool>0}),gate:L.m[5][q.x]}},qinfo:function(){return L.quizzes.map(function(q){return {solved:!!q.solved,ans:q.ans,gx:q.x,blocks:q.blocks.map(function(b){return {x:b.x,y:b.y,v:b.v,sx:(b.x+24-cam)*SC,sy:GY+(b.y+24)*SC}})}})},place:function(x,y){P.x=x;P.y=y;P.vx=0;P.vy=0;P.inv=0},dbg:function(){var B=boss;return {px:P.x,py:P.y,hp:P.hp,deaths:DEATHS,hits:HITS,mode:mode,b:B&&{t:B.type,x:B.x,y:B.y,w:B.w,h:B.h,st:B.st,dz:B.dizzy,hp:B.hp,tx:B.tx||0,vx:B.vx||0,ph:B.phase},a0:L.arena.x0*TS,a1:L.arena.x1*TS}},setU:function(n){SAVE.unlocked=n;DEATHS=0;HITS=0;resize()},tele:function(tx){P.x=tx*TS;P.y=2*TS;P.vy=0},chicken:function(){var c=L.ents.filter(function(e){return e.t==='chicken'})[0];if(c){P.x=c.x;P.y=c.y+20}}};
 })();
 </script>
-<script>if('serviceWorker' in navigator&&location.protocol==='https:'){addEventListener('load',function(){navigator.serviceWorker.register('sw.js?v=1.1.5-20261023q').catch(function(){})})}</script>
+<script>if('serviceWorker' in navigator&&location.protocol==='https:'){addEventListener('load',function(){navigator.serviceWorker.register('sw.js?v=1.1.6-20261023r').catch(function(){})})}</script>
 <script>/*hub-home*/(function(){var own='alex',k;try{k=localStorage.kidsHub}catch(e){}if(k!=='zoe'&&k!=='alex')k=own;
 var u=k==='zoe'?'/doodle-and-zoe/':'/alex-games/',b=document.createElement('div');b.id='hubHome';b.setAttribute('role','button');b.setAttribute('aria-label','hold to go home');
 b.innerHTML='<svg width="38" height="38" viewBox="0 0 38 38" style="position:absolute;left:0;top:0;pointer-events:none"><circle cx="19" cy="19" r="16" fill="none" stroke="#ffd54a" stroke-width="4" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="100.5" transform="rotate(-90 19 19)"/></svg><span style="position:relative;pointer-events:none">🏠</span>';
