@@ -83,10 +83,10 @@ function rnd(a,b){return a+Math.floor(Math.random()*(b-a+1))}
 function shuffle3(ans,alts){var o=[ans];for(var i=0;i<alts.length&&o.length<3;i++)if(o.indexOf(alts[i])<0)o.push(alts[i]);
  while(o.length<3){var v=ans+rnd(-3,3);if(v>=0&&o.indexOf(v)<0)o.push(v)}
  for(i=2;i>0;i--){var j=rnd(0,i),t=o[i];o[i]=o[j];o[j]=t}return o}
-function makeQuiz(k){var a,b2,q={kind:k,solved:false};
- if(k==='add'){a=rnd(4,9);b2=rnd(3,9);q.text=a+' + '+b2+' = ?';q.vo=['n'+a,'plus','n'+b2];q.ans=a+b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-1])}
- else if(k==='add2'){a=rnd(2,5);b2=rnd(2,5);q.text=a+' × '+b2+' = ?';q.vo=['n'+a,'times','n'+b2];q.ans=a*b2;q.opts=shuffle3(q.ans,[q.ans+2,q.ans-1])}
- else if(k==='sub'){a=rnd(12,20);b2=rnd(3,9);q.text=a+' − '+b2+' = ?';q.vo=['n'+a,'minus','n'+b2];q.ans=a-b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-2])}
+function makeQuiz(k){var a,b2,q={kind:k,solved:false},z=(typeof L!=='undefined'&&L&&L.zi!=null)?L.zi:0,hard=z>=3;
+ if(k==='add'){a=rnd(hard?8:4,hard?19:9);b2=rnd(hard?6:3,hard?19:9);q.text=a+' + '+b2+' = ?';q.vo=['n'+Math.min(a,20),'plus','n'+Math.min(b2,20)];q.ans=a+b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-1,q.ans+10])}
+ else if(k==='add2'){a=rnd(hard?3:2,hard?9:5);b2=rnd(hard?3:2,hard?9:5);q.text=a+' × '+b2+' = ?';q.vo=['n'+a,'times','n'+b2];q.ans=a*b2;q.opts=shuffle3(q.ans,[q.ans+a,q.ans-1,q.ans+b2])}
+ else if(k==='sub'){a=rnd(hard?20:12,hard?50:20);b2=rnd(hard?5:3,hard?19:9);if(b2>=a)b2=a-1;q.text=a+' − '+b2+' = ?';q.vo=['n'+Math.min(a,20),'minus','n'+Math.min(b2,20)];q.ans=a-b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-2,q.ans+10])}
  else if(k==='count'){a=rnd(2,6);q.text='How many? '+new Array(a+1).join('🍄🍄');q.vo=['how_many'];a*=2;q.ans=a;q.opts=shuffle3(a,[a+1,a-1])}
  else {var P=[['🔴','🔵'],['⭐','🌙'],['🟢','🟡','🟣']][rnd(0,2)],seq=[];for(var i=0;i<5;i++)seq.push(P[i%P.length]);
   q.text='What comes next? '+seq.join('')+'❓';q.vo=['what_next'];q.ans=P[5%P.length];var o=P.slice();if(o.length<3)o.push('🟠');
