@@ -4,7 +4,7 @@ var TS=48,ROWS=12,WH=ROWS*TS;
 var cv=document.getElementById('c'),cx=cv.getContext('2d');
 var DPR=Math.min(window.devicePixelRatio||1,2),SW=0,SH=0,SC=1,VW=800,GX=0,GY=0,PORT=false;
 var SAVEKEY='alexCaveRescue1';
-var SAVE={unlocked:0,gems:0,mom:false,dad:false,cp:null,story:false,won:false};
+var SAVE={unlocked:0,gems:0,mom:false,dad:false,cp:null,story:false,won:false,diff:0};
 try{var s0=JSON.parse(localStorage.getItem(SAVEKEY)||'null');if(s0)for(var k in s0)SAVE[k]=s0[k]}catch(e){}
 function save(){try{localStorage.setItem(SAVEKEY,JSON.stringify(SAVE))}catch(e){}}
 var POWERS=[
@@ -32,7 +32,7 @@ function build(zi){
   plat:function(x,y,w,c){for(var i=0;i<w;i++)set(x+i,y,c||'=')},
   gem:function(x,y){E.push({t:'gem',x:x*TS+24,y:y*TS+24});gemsBefore++},
   gems:function(x,y,n){for(var i=0;i<n;i++)b.gem(x+i,y)},
-  en:function(t,x,y){E.push({t:t,x:x*TS+24,y:y*TS+24,x0:x*TS+24,vx:-70,hp:1,ph:Math.random()*6})},
+  en:function(t,x,y){E.push({t:t,x:x*TS+24,y:y*TS+24,x0:x*TS+24,vx:SAVE.diff?-105:-70,hp:1,ph:Math.random()*6})},
   cp:function(x,y){lv.cps.push({x:x*TS+24,y:y*TS+48,on:false})},
   heart:function(x,y){E.push({t:'heart',x:x*TS+24,y:y*TS+24})},
   chicken:function(x,y){E.push({t:'chicken',x:x*TS+24,y:y*TS+24})},
@@ -83,7 +83,7 @@ function rnd(a,b){return a+Math.floor(Math.random()*(b-a+1))}
 function shuffle3(ans,alts){var o=[ans];for(var i=0;i<alts.length&&o.length<3;i++)if(o.indexOf(alts[i])<0)o.push(alts[i]);
  while(o.length<3){var v=ans+rnd(-3,3);if(v>=0&&o.indexOf(v)<0)o.push(v)}
  for(i=2;i>0;i--){var j=rnd(0,i),t=o[i];o[i]=o[j];o[j]=t}return o}
-function makeQuiz(k){var a,b2,q={kind:k,solved:false},z=(typeof L!=='undefined'&&L&&L.zi!=null)?L.zi:0,hard=z>=3;
+function makeQuiz(k){var a,b2,q={kind:k,solved:false},z=(typeof L!=='undefined'&&L&&L.zi!=null)?L.zi:0,hard=z>=3||!!SAVE.diff;
  if(k==='add'){a=rnd(hard?8:4,hard?19:9);b2=rnd(hard?6:3,hard?19:9);q.text=a+' + '+b2+' = ?';q.vo=['n'+Math.min(a,20),'plus','n'+Math.min(b2,20)];q.ans=a+b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-1,q.ans+10])}
  else if(k==='add2'){a=rnd(hard?3:2,hard?9:5);b2=rnd(hard?3:2,hard?9:5);q.text=a+' × '+b2+' = ?';q.vo=['n'+a,'times','n'+b2];q.ans=a*b2;q.opts=shuffle3(q.ans,[q.ans+a,q.ans-1,q.ans+b2])}
  else if(k==='sub'){a=rnd(hard?20:12,hard?50:20);b2=rnd(hard?5:3,hard?19:9);if(b2>=a)b2=a-1;q.text=a+' − '+b2+' = ?';q.vo=['n'+Math.min(a,20),'minus','n'+Math.min(b2,20)];q.ans=a-b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-2,q.ans+10])}
@@ -130,7 +130,7 @@ function lavaChickenJingle(){var now=performance.now();if(now<jingleUntil)return
  [0.62,0.74,1.55,1.67].forEach(function(d){tone(900,.07,'square',.07,1500,d);noise(.05,.1,3000,d)});tone(262,.8,'triangle',.12,0,0);tone(392,.8,'triangle',.1,0,.62)}
 // ---------- game state ----------
 var mode='title',P=null,cam=0,shake=0,parts=[],pops=[],fbs=[],shots=[],boss=null,time=0,cardT=0,card=null,zgems=0,flash=0;
-function newPlayer(x,y){return {x:x,y:y,w:30,h:52,vx:0,vy:0,on:false,face:1,jumps:0,hp:5,max:5,inv:0,dash:0,dashCd:0,fireCd:0,coy:0,buf:0,air:0,ride:null,walk:0}}
+function newPlayer(x,y){var mh=SAVE.diff?3:5;return {x:x,y:y,w:30,h:52,vx:0,vy:0,on:false,face:1,jumps:0,hp:mh,max:mh,inv:0,dash:0,dashCd:0,fireCd:0,coy:0,buf:0,air:0,ride:null,walk:0}}
 function startZone(zi,fromCp){L=build(zi);mode='play';boss=null;parts=[];pops=[];fbs=[];shots=[];zgems=0;card=null;
  var sx=L.start[0]*TS+24,sy=L.start[1]*TS;
  if(fromCp&&SAVE.cp&&SAVE.cp.z===zi){var c=L.cps[SAVE.cp.i];if(c){sx=c.x;sy=c.y-60;for(var i=0;i<=SAVE.cp.i;i++)L.cps[i].on=true}}
@@ -270,7 +270,7 @@ function throwFire(){var vx=P.face*560,vy=0;var tgt=null,bd=1e9;
  fbs.push({x:P.x+P.face*18,y:P.y-30,vx:vx,vy:vy,life:1.4});sfx('fire')}
 // ---------- bosses ----------
 var BDEF={golem:{hp:4,w:110,h:130},bat:{hp:3,w:120,h:80},spider:{hp:4,w:110,h:80},yeti:{hp:5,w:110,h:140},magmor:{hp:18,w:150,h:170}};
-function spawnBoss(){var A=L.arena,d=BDEF[L.Z.boss];boss={type:L.Z.boss,hp:d.hp,max:d.hp,w:d.w,h:d.h,x:(A.x1-3)*TS,y:A.t*TS,st:'intro',t:1.6,vx:0,vy:0,inv:0,phase:1,face:-1,dizzy:0};
+function spawnBoss(){var A=L.arena,d=BDEF[L.Z.boss],hp=d.hp+(SAVE.diff?2:0);boss={type:L.Z.boss,hp:hp,max:hp,w:d.w,h:d.h,x:(A.x1-3)*TS,y:A.t*TS,st:'intro',t:1.6,vx:0,vy:0,inv:0,phase:1,face:-1,dizzy:0};
  if(boss.type==='bat'||boss.type==='spider'){boss.y=3*TS}
  sfx('roar');shake=.6;pop(L.Z.bossName+'!',boss.x,4*TS,true)}
 function bossRestart(){if(!boss)return;var keep=boss.type==='magmor'?[15,10,5][boss.phase-1]:boss.hp;spawnBoss();boss.hp=keep;if(boss.type==='magmor')setPhase(boss,15-keep>=10?3:15-keep>=5?2:1,true);shots=[]}
@@ -440,7 +440,8 @@ function title(){bg('#1c1430','#4a1e10');var u=Math.min(SW,SH*1.4)/900;
   if(!lock)UI.push({x:x,y:gy,w:bw,h:bw*1.15,fn:function(){startZone(i,true);sfx('door')}})});
  var cz=SAVE.res?SAVE.res.z:SAVE.cp?SAVE.cp.z:Math.min(SAVE.unlocked,4);button(SAVE.unlocked||SAVE.cp||SAVE.res?(SAVE.res||SAVE.cp?'▶ CONTINUE: ':'▶ PLAY: ')+ZONES[cz].name:'▶ START ADVENTURE',gc-Math.min(260,SW*.4),gy+bw*1.15+(PORT?SH*.04:0)+SH*.06,Math.min(520,SW*.8),Math.min(80,SH*.11),function(){startZone(cz,true);sfx('door')},null,true);
  var r=(SAVE.mom?'Mom rescued 💖  ':'Mom: find her in the Spider Depths  ')+(SAVE.dad?'Dad rescued 💙':'Dad: find him in the Lava Core');if(PORT){var rp=r.split('  ');txt(rp[0],SW/2,SH-58,Math.min(22,SW/22));txt(rp[1]||'',SW/2,SH-28,Math.min(22,SW/22))}else txt(r,SW/2,SH-28,Math.min(22,SW/34));
- if(SAVE.won)txt('🏆 CAVE HERO! Play any zone again!',SW/2,SH-60,Math.min(24,SW/30),'#ffd23f')}
+ if(SAVE.won)txt('🏆 CAVE HERO! Play any zone again!',SW/2,SH-60,Math.min(24,SW/30),'#ffd23f');
+ button(SAVE.diff?'HARD':'NORMAL',16,SH*.16-10,Math.min(140,SW*.18),Math.min(48,SH*.07),function(){SAVE.diff=SAVE.diff?0:1;save();sfx('cp')},SAVE.diff?'#e53935':'#43a047');}
 function drawCard(dt){var c=card;c.t=(c.t||0)+dt;bg('rgba(10,5,20,1)','#2a1440');var u=Math.min(SW,SH*1.3)/900,cy=SH*.5;
  if(c.k==='story'){txt('OH NO!',SW/2,SH*.15,60*u,'#ff6a3d');wrap('King Magmor trapped Mom and Dad in cages deep in the caves! Mom is in the Spider Depths. Dad is in the Lava Core. Beat the bosses, win super powers, and rescue them, Alex!',SW/2,SH*.27,SW*.8,28*u);
   cx.save();cx.translate(SW/2,SH*.78);cx.scale(u*2,u*2);drawAlex(0,0,1,{walk:c.t*200,moving:true});cx.restore();
