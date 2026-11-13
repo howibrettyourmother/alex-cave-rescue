@@ -83,7 +83,8 @@ function build(zi){
   hidden:function(x,y,w){for(var i=0;i<w;i++)set(x+i,y,'h')},
   mush:function(x,y){set(x,y,'m')},
   raft:function(x,y,range){lv.rafts.push({x:x*TS,y:y*TS,x0:x*TS,x1:(x+range)*TS,w:110,h:26,vx:90,dx:0})},
-  quiz:function(x,gt,kind){for(var y=1;y<gt;y++)set(x,y,'Q');var q=makeQuiz(kind);q.x=x;q.gt=gt;q.blocks=[];
+  // optional TREASURE DOOR: the math puzzle never blocks the path (no wall); solving it opens a chest of bonus gems + a secret heart
+  quiz:function(x,gt,kind){var q=makeQuiz(kind);q.x=x;q.gt=gt;q.blocks=[];
    for(var i=0;i<3;i++)q.blocks.push({x:(x-8+i*3)*TS,y:(gt-4)*TS,v:q.opts[i],bump:0,bad:0});lv.quizzes.push(q)},
   door:function(x,gt){for(var y=1;y<gt;y++)set(x,y,'G');lv.doors.push({x:x,gt:gt,need:Math.max(3,Math.floor(gemsBefore*0.6)),open:false})},
   start:function(x,y){lv.start=[x,y]},
@@ -131,7 +132,7 @@ function makeQuiz(k){var a,b2,q={kind:k,solved:false},z=(typeof L!=='undefined'&
  else {var P=[['🔴','🔵'],['⭐','🌙'],['🟢','🟡','🟣']][rnd(0,2)],seq=[];for(var i=0;i<5;i++)seq.push(P[i%P.length]);
   q.text='What comes next? '+seq.join('')+'❓';q.vo=['what_next'];q.ans=P[5%P.length];var o=P.slice();if(o.length<3)o.push('🟠');
   q.opts=o.sort(function(){return Math.random()-.5})}
- return q}
+ q.text='💰 '+q.text;return q}
 // ---------- spoken quiz prompts: natural pre-recorded clips (voice/*.mp3, src/genvoice.sh), chained ----------
 var VB={};function vLoad(k){if(VB[k])return VB[k];var a=ac();VB[k]=new Promise(function(res){if(!a)return res(null);var x=new XMLHttpRequest();x.open('GET','voice/'+k+'.mp3');x.responseType='arraybuffer';
  x.onload=function(){try{a.decodeAudioData(x.response,res,function(){res(null)})}catch(e){res(null)}};x.onerror=function(){res(null)};x.send()});return VB[k]}
@@ -178,7 +179,8 @@ function startZone(zi,fromCp){L=build(zi);mode='play';boss=null;parts=[];pops=[]
  SAVE.res=null;if(sx>L.start[0]*TS+24){L.quizzes.forEach(function(q){if(q.x*TS<sx)openQuiz(q,true)});L.doors.forEach(function(d){if(d.x*TS<sx)openDoor(d,true)})}
  P=newPlayer(sx,sy);cam=Math.max(0,P.x-VW/3);
  if(zi===0&&!SAVE.story){card={k:'story'};mode='card'}}
-function openQuiz(q,silent){q.solved=true;for(var y=1;y<q.gt;y++)L.m[y][q.x]='.';if(!silent){sfx('door');burst(q.x*TS+24,(q.gt-3)*TS,'#ffe066',30);pop('Correct! 🎉',q.x*TS,(q.gt-5)*TS)}}
+function openQuiz(q,silent){q.solved=true;q.openT=time;if(!silent){sfx('door');fanfare();var cxp=q.x*TS+24,gy=(q.gt-1)*TS;burst(cxp,gy,'#ffe066',36);burst(cxp,gy,'#7df',20,160);pop('TREASURE! +6 💎',q.x*TS,(q.gt-5)*TS);
+  for(var i=0;i<6;i++)L.ents.push({t:'gem',x:cxp+(i-2.5)*40,y:gy-60-(i%2)*36});L.ents.push({t:'heart',x:cxp,y:gy-150})}}
 function openDoor(d,silent){d.open=true;for(var y=1;y<d.gt;y++)L.m[y][d.x]='.';if(!silent){sfx('door');burst(d.x*TS+24,(d.gt-3)*TS,'#7af',30)}}
 function tileAt(px,py){var x=Math.floor(px/TS),y=Math.floor(py/TS);if(x<0)return'#';if(x>=L.w||y<0)return'#';if(y>=ROWS)return'.';return L.m[y][x]}
 function solid(c,fromAbove){return c==='#'||c==='X'||c==='W'||c==='Q'||c==='G'||c==='m'||(c==='h'&&has('glow'))}
@@ -397,6 +399,12 @@ function drawChicken(x,y,s,roast){cx.save();cx.translate(x,y);cx.scale(s,s);var 
  if(roast){B('#8a4b1c',-16,-8,32,18);B('#b5652a',-12,-12,24,8);B('#f4e1c1',14,-14,6,12);B('#fff',18,-18,6,6);B('#f4e1c1',-20,-14,6,12);B('#fff',-24,-18,6,6);B('#ff9a00',-16,8,32,4)}
  else{B('#fff',-14,-14,28,22);B('#eee',-14,2,28,6);B('#fff',4,-28,14,16);B('#222',12,-24,4,4);B('#f5b400',18,-20,8,5);B('#e22',8,-34,6,6);B('#e22',18,-14,4,6);B('#f5b400',-6,8,4,8);B('#f5b400',4,8,4,8);B('#ddd',-18,-8,8,10)}
  cx.restore()}
+function drawChest(x,gy,open,ot){var bob=open?0:Math.sin(time*3)*2;cx.save();cx.translate(x,gy+bob);
+ if(open){var g=cx.createRadialGradient(0,-30,4,0,-30,90);g.addColorStop(0,'rgba(255,230,90,.75)');g.addColorStop(1,'rgba(255,200,0,0)');cx.fillStyle=g;cx.fillRect(-90,-120,180,140)}
+ cx.fillStyle='#8a4b16';rr(-34,-40,68,40,6);cx.fill();cx.fillStyle='#c9832e';cx.fillRect(-34,-30,68,8);cx.fillStyle='#ffd23f';cx.fillRect(-4,-34,8,14);
+ cx.save();cx.translate(0,-40);if(open)cx.rotate(-0.9);cx.fillStyle='#a45a1c';rr(-34,-20,68,22,10);cx.fill();cx.fillStyle='#ffd23f';cx.fillRect(-34,-6,68,5);cx.restore();
+ if(!open){cx.font='bold 22px sans-serif';cx.textAlign='center';cx.fillStyle='#fff';cx.fillText('?',0,-48+Math.sin(time*5)*3)}
+ cx.restore()}
 function tileCol(c,Z){return c==='X'?'#8d8d8d':c==='W'?'#a0632a':c==='Q'?'#3f7fe0':c==='G'?'#2bb0a0':Z.rock}
 function drawWorld(){var Z=L.Z,x0=Math.floor(cam/TS)-1,x1=Math.ceil((cam+VW)/TS)+1,x,y,c;
  var g=cx.createLinearGradient(0,0,0,WH);g.addColorStop(0,Z.sky[0]);g.addColorStop(1,Z.sky[1]);cx.fillStyle=g;cx.fillRect(cam,0,VW,WH);
@@ -414,12 +422,14 @@ function drawWorld(){var Z=L.Z,x0=Math.floor(cam/TS)-1,x1=Math.ceil((cam+VW)/TS)
   else if(c==='^'){cx.fillStyle='#ddd';for(var i=0;i<3;i++){cx.beginPath();cx.moveTo(X+i*16,Y+TS);cx.lineTo(X+i*16+8,Y+16);cx.lineTo(X+i*16+16,Y+TS);cx.fill()}}
   else if(c==='L'){cx.fillStyle=y===10?'#ff6a00':'#d63a00';cx.fillRect(X,Y+(y===10?10+Math.sin(time*3+x)*4:0),TS,TS);if(y===10){cx.fillStyle='#ffd000';cx.fillRect(X,Y+10+Math.sin(time*3+x)*4,TS,5)}}
   else if(c==='h'){if(has('glow')){cx.fillStyle='rgba(255,240,120,'+(.55+Math.sin(time*4)*.2)+')';rr(X+2,Y+2,TS-4,18,6);cx.fill();cx.strokeStyle='#fff6a0';cx.lineWidth=2;cx.stroke()}}}
+ // treasure chests (optional bonus doors)
+ L.quizzes.forEach(function(q){drawChest(q.x*TS+24,q.gt*TS,q.solved,q.openT)});
  // quizzes
  L.quizzes.forEach(function(q){if(q.solved)return;var qx=(q.x-8)*TS,qy=(q.gt-6.6)*TS;cx.font='bold 30px sans-serif';cx.textAlign='left';var tw=cx.measureText(q.text).width+30;q.tw=tw;
   cx.fillStyle='rgba(255,255,255,.92)';rr(qx-10,qy-30,Math.max(tw,9*TS),46,12);cx.fill();cx.fillStyle='#223';cx.fillText(q.text,qx+5,qy+4);if(q.vo){cx.font='24px sans-serif';cx.fillText('🔊',qx-10+Math.max(tw,9*TS)-34,qy+2)}
   q.blocks.forEach(function(bk){var by=bk.y-(bk.bump>0?Math.sin(bk.bump*10)*8:0),sx=bk.bad>0?Math.sin(time*60)*4:0;cx.fillStyle=bk.bad>0?'#e55':'#ffc93c';rr(bk.x+sx,by,TS,TS,8);cx.fill();cx.strokeStyle='#a06b00';cx.lineWidth=3;cx.stroke();
    cx.fillStyle='#402';cx.textAlign='center';cx.font='bold 28px sans-serif';cx.fillText(String(bk.v),bk.x+24+sx,by+34)});
-  cx.fillStyle='rgba(255,255,255,.8)';cx.font='bold 18px sans-serif';cx.textAlign='center';cx.fillText('Bonk, stand on, or tap the answer! ⬆',(q.x-4.5)*TS,(q.gt-2.6)*TS+70>q.gt*TS?(q.gt-0.3)*TS:(q.gt-2.6)*TS)});
+  cx.fillStyle='rgba(255,255,255,.8)';cx.font='bold 18px sans-serif';cx.textAlign='center';cx.fillText('Bonus treasure! Bonk or tap the answer ⬆',(q.x-4.5)*TS,(q.gt-2.6)*TS+70>q.gt*TS?(q.gt-0.3)*TS:(q.gt-2.6)*TS)});
  L.doors.forEach(function(d){if(d.open)return;cx.fillStyle='rgba(0,0,0,.55)';rr(d.x*TS-40,(d.gt-5)*TS,128,40,10);cx.fill();cx.fillStyle='#fff';cx.font='bold 24px sans-serif';cx.textAlign='center';cx.fillText(Math.min(zgems,d.need)+' / '+d.need+' 💎',d.x*TS+24,(d.gt-5)*TS+29)});
  L.cps.forEach(function(c){cx.fillStyle='#ddd';cx.fillRect(c.x-3,c.y-80,6,80);cx.fillStyle=c.on?'#3c3':'#c33';cx.beginPath();cx.moveTo(c.x+3,c.y-80);cx.lineTo(c.x+40,c.y-66);cx.lineTo(c.x+3,c.y-52);cx.fill()});
  L.rafts.forEach(function(r){cx.fillStyle='#7a4a22';rr(r.x,r.y,r.w,r.h,8);cx.fill();drawChicken(r.x+r.w/2,r.y-2+Math.sin(time*8)*2,1.4,false);cx.fillStyle='#fff';cx.font='bold 14px sans-serif';cx.textAlign='center';cx.fillText('🐔 ride!',r.x+r.w/2,r.y+44)});
