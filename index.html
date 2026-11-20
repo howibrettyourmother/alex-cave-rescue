@@ -381,9 +381,10 @@ function rr(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r)
 function drawAlex(x,y,face,o){o=o||{};cx.save();cx.translate(x,y);cx.scale(face,1);var w=Math.sin((o.walk||0)/14)*(o.moving?1:0);
  if(o.glow){var g=cx.createRadialGradient(0,-28,5,0,-28,70);g.addColorStop(0,'rgba(255,250,180,.55)');g.addColorStop(1,'rgba(255,250,180,0)');cx.fillStyle=g;cx.fillRect(-70,-98,140,140)}
  if(o.cape){cx.fillStyle='#e23';cx.beginPath();cx.moveTo(-6,-40);cx.quadraticCurveTo(-26-w*4,-20,-20,-4);cx.lineTo(-2,-10);cx.fill()}
- cx.fillStyle='#234';cx.fillRect(-9,-14,7,14+w*2);cx.fillRect(2,-14,7,14-w*2);cx.fillStyle='#222';cx.fillRect(-11,-2+w*2,10,4);cx.fillRect(1,-2-w*2,10,4);
- cx.fillStyle='#2b7de9';rr(-12,-38,24,26,6);cx.fill();cx.fillStyle='#ffd23f';cx.font='bold 13px sans-serif';cx.textAlign='center';cx.fillText('A',0,-20);
- cx.fillStyle='#f1c27d';cx.beginPath();cx.arc(0,-50,13,0,6.3);cx.fill();cx.fillStyle='#6b3e1f';cx.beginPath();cx.arc(0,-54,13,3.3,6.2);cx.fill();cx.fillRect(-13,-56,6,6);
+ cx.fillStyle='#2c4a7a';cx.fillRect(-9,-14,7,14+w*2);cx.fillRect(2,-14,7,14-w*2);cx.fillStyle='#8b5a2e';cx.fillRect(-11,-2+w*2,10,4);cx.fillRect(1,-2-w*2,10,4);
+ cx.fillStyle='#1e8a96';rr(-12,-38,24,26,6);cx.fill();cx.fillStyle='#e8b84a';rr(-8,-38,16,5,3);cx.fill();
+ cx.fillStyle='#f1c27d';cx.beginPath();cx.arc(0,-50,13,0,6.3);cx.fill();
+ cx.fillStyle='#3a2416';cx.beginPath();cx.arc(0,-54,13,3.3,6.2);cx.fill();cx.fillRect(-13,-56,6,7);cx.fillRect(6,-57,7,6);cx.fillRect(-3,-62,8,5);
  cx.fillStyle='#222';cx.beginPath();cx.arc(5,-51,2,0,6.3);cx.fill();cx.strokeStyle='#222';cx.lineWidth=1.5;cx.beginPath();cx.arc(4,-46,4,.3,2.6);cx.stroke();
  cx.fillStyle='#e8a33d';cx.fillRect(-14,-62,26,5);cx.fillStyle='#ffe066';cx.beginPath();cx.arc(0,-60,4,0,6.3);cx.fill();
  cx.restore()}
@@ -534,7 +535,7 @@ window.__C={start:function(z){startZone(z,false)},toBoss:function(z){if(L===null
  btns:function(){return BTNS.map(function(b){return [b.id,b.x,b.y]})},qst:function(i){var q=L.quizzes[i];return {solved:!!q.solved,bad:q.blocks.some(function(b){return b.bad>0||b.cool>0}),gate:L.m[5][q.x]}},qinfo:function(){return L.quizzes.map(function(q){return {solved:!!q.solved,ans:q.ans,gx:q.x,blocks:q.blocks.map(function(b){return {x:b.x,y:b.y,v:b.v,sx:(b.x+24-cam)*SC,sy:GY+(b.y+24)*SC}})}})},place:function(x,y){P.x=x;P.y=y;P.vx=0;P.vy=0;P.inv=0},dbg:function(){var B=boss;return {px:P.x,py:P.y,hp:P.hp,deaths:DEATHS,hits:HITS,mode:mode,b:B&&{t:B.type,x:B.x,y:B.y,w:B.w,h:B.h,st:B.st,dz:B.dizzy,hp:B.hp,tx:B.tx||0,vx:B.vx||0,ph:B.phase},a0:L.arena.x0*TS,a1:L.arena.x1*TS}},setU:function(n){SAVE.unlocked=n;DEATHS=0;HITS=0;resize()},tele:function(tx){P.x=tx*TS;P.y=2*TS;P.vy=0},chicken:function(){var c=L.ents.filter(function(e){return e.t==='chicken'})[0];if(c){P.x=c.x;P.y=c.y+20}}};
 })();
 </script>
-<script>if('serviceWorker' in navigator&&location.protocol==='https:'){addEventListener('load',function(){navigator.serviceWorker.register('sw.js?v=1.1.6-20261023r').catch(function(){})})}</script>
+<script>if('serviceWorker' in navigator&&location.protocol==='https:'){addEventListener('load',function(){navigator.serviceWorker.register('sw.js?v=1.5.3-20261120avatars').catch(function(){})})}</script>
 <script>/*bgm*/window.BGM_CFG={"id":"alex-cave-rescue","base":"music/","v":"20261115intro","intro":"intro","tracks":{"title":[48.0, 1.0],"z0":[48.0, 1.0],"z1":[48.0, 1.0],"z2":[48.0, 1.0],"z3":[48.0, 1.0],"z4":[48.0, 1.0],"boss":[48.0, 1.0],"magmor1":[48.0, 1.0],"magmor2":[48.0, 1.0],"magmor3":[48.0, 1.0],"win":[48.0, 1.0]},"map":{},"pos":"left:10px;top:58px","sync":["magmor1","magmor2","magmor3"],"poll":function(){var c=window.__C;if(!c||!c.state)return{};var s=c.state(),b=c.boss&&c.boss(),a='title';if(s.mode==='card')a=(s.card==='rescue'||s.card==='power')?'win':(s.card==='story'?'title':'z'+s.zone);else if(s.mode==='play'||s.mode==='pause'){a='z'+s.zone;if(b&&b.hp>0)a=s.zone===4?'magmor'+Math.max(1,Math.min(3,b.phase||1)):'boss'}return{area:a,muted:s.muted,speaking:!!(window.__vSpk&&window.__vSpk())}}};</script><script src="music/bgm.js?v=20261115intro" defer></script>
 <script>/*sw-reload*/(function(){if(!('serviceWorker' in navigator))return;var sw=navigator.serviceWorker,had=!!sw.controller,done=false;
 sw.addEventListener('controllerchange',function(){if(!had){had=true;return}if(done)return;done=true;try{if(sessionStorage.swReloaded&&Date.now()-sessionStorage.swReloaded<10000)return;sessionStorage.swReloaded=Date.now()}catch(e){}location.reload()});
