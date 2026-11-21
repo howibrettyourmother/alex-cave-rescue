@@ -85,17 +85,18 @@ function shuffle3(ans,alts){var o=[ans];for(var i=0;i<alts.length&&o.length<3;i+
  while(o.length<3){var v=ans+rnd(-3,3);if(v>=0&&o.indexOf(v)<0)o.push(v)}
  for(i=2;i>0;i--){var j=rnd(0,i),t=o[i];o[i]=o[j];o[j]=t}return o}
 function makeQuiz(k){var a,b2,q={kind:k,solved:false},z=(typeof L!=='undefined'&&L&&L.zi!=null)?L.zi:0,hard=z>=3||!!SAVE.diff;
- if(k==='add'){a=rnd(hard?8:4,hard?19:9);b2=rnd(hard?6:3,hard?19:9);q.text=a+' + '+b2+' = ?';q.vo=['n'+Math.min(a,20),'plus','n'+Math.min(b2,20)];q.ans=a+b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-1,q.ans+10])}
+ if(k==='add'){a=rnd(hard?8:4,hard?19:9);b2=rnd(hard?6:3,hard?19:9);q.text=a+' + '+b2+' = ?';q.vo=['n'+a,'plus','n'+b2];q.ans=a+b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-1,q.ans+10])}
  else if(k==='add2'){a=rnd(hard?3:2,hard?9:5);b2=rnd(hard?3:2,hard?9:5);q.text=a+' × '+b2+' = ?';q.vo=['n'+a,'times','n'+b2];q.ans=a*b2;q.opts=shuffle3(q.ans,[q.ans+a,q.ans-1,q.ans+b2])}
- else if(k==='sub'){a=rnd(hard?20:12,hard?50:20);b2=rnd(hard?5:3,hard?19:9);if(b2>=a)b2=a-1;q.text=a+' − '+b2+' = ?';q.vo=['n'+Math.min(a,20),'minus','n'+Math.min(b2,20)];q.ans=a-b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-2,q.ans+10])}
+ else if(k==='sub'){a=rnd(hard?20:12,hard?50:20);b2=rnd(hard?5:3,hard?19:9);if(b2>=a)b2=a-1;q.text=a+' − '+b2+' = ?';q.vo=['n'+a,'minus','n'+b2];q.ans=a-b2;q.opts=shuffle3(q.ans,[q.ans+1,q.ans-2,q.ans+10])}
  else if(k==='count'){a=rnd(2,6);q.text='How many? '+new Array(a+1).join('🍄🍄');q.vo=['how_many'];a*=2;q.ans=a;q.opts=shuffle3(a,[a+1,a-1])}
  else {var P=[['🔴','🔵'],['⭐','🌙'],['🟢','🟡','🟣']][rnd(0,2)],seq=[];for(var i=0;i<5;i++)seq.push(P[i%P.length]);
   q.text='What comes next? '+seq.join('')+'❓';q.vo=['what_next'];q.ans=P[5%P.length];var o=P.slice();if(o.length<3)o.push('🟠');
   q.opts=o.sort(function(){return Math.random()-.5})}
  q.text='💰 '+q.text;return q}
-// ---------- spoken quiz prompts: natural pre-recorded clips (voice/*.mp3, src/genvoice.sh), chained ----------
-var VB={};function vLoad(k){if(VB[k])return VB[k];var a=ac();VB[k]=new Promise(function(res){if(!a)return res(null);var x=new XMLHttpRequest();x.open('GET','voice/'+k+'.mp3');x.responseType='arraybuffer';
- x.onload=function(){try{a.decodeAudioData(x.response,res,function(){res(null)})}catch(e){res(null)}};x.onerror=function(){res(null)};x.send()});return VB[k]}
+// ---------- spoken quiz prompts: ElevenLabs clips (audio/voice/{kid}/*.mp3), chained ----------
+function voiceKid(){try{if(window.KVX&&KVX.kid)return KVX.kid;var q=new URLSearchParams(location.search),k=q.get('kid')||q.get('mode');if(!k){try{k=localStorage.kidsHub}catch(e){}}if(k==='zoe')return'zoe'}catch(e){}return'alex'}
+var VB={};function vLoad(k){var id=voiceKid()+'/'+k;if(VB[id])return VB[id];var a=ac();VB[id]=new Promise(function(res){if(!a)return res(null);var x=new XMLHttpRequest();x.open('GET','audio/voice/'+id+'.mp3?v=20261120el2');x.responseType='arraybuffer';
+ x.onload=function(){try{a.decodeAudioData(x.response,res,function(){res(null)})}catch(e){res(null)}};x.onerror=function(){res(null)};x.send()});return VB[id]}
 // one prompt at a time (a new one cuts the old), and music ducks while it plays (bgm poll reads __vSpk)
 var vGen=0,vSrc=[],vEnd=0;window.__vSpk=function(){return !!AC&&AC.currentTime<vEnd};
 function hush(){vGen++;vEnd=0;vSrc.forEach(function(s){try{s.stop()}catch(e){}});vSrc=[]}
@@ -488,7 +489,7 @@ var last=0;function frame(t){requestAnimationFrame(frame);var dt=Math.min(.033,(
   hud();if(mode==='pause')pauseScreen()}
  else if(mode==='title')title();else if(mode==='card')drawCard(dt)}
 requestAnimationFrame(frame);
-window.__C={start:function(z){startZone(z,false)},toBoss:function(z){if(L===null||L.zi!==z)startZone(z,false);card=null;mode='play';P.x=(L.arena.x0+3)*TS;P.y=(L.arena.t-1)*TS;P.hp=P.max;cam=P.x-200},
+window.__C={sayQuiz:sayQuiz,vLoad:vLoad,voiceKid:voiceKid,ac:ac,hush:hush,start:function(z){startZone(z,false)},toBoss:function(z){if(L===null||L.zi!==z)startZone(z,false);card=null;mode='play';P.x=(L.arena.x0+3)*TS;P.y=(L.arena.t-1)*TS;P.hp=P.max;cam=P.x-200},
  hitBoss:function(n){if(boss){boss.inv=0;hitBoss(n||1)}},boss:function(){return boss&&{type:boss.type,hp:boss.hp,phase:boss.phase,st:boss.st}},
  state:function(){return {muted:muted,mode:mode,card:card&&card.k,zone:L&&L.zi,hp:P&&P.hp,gems:zgems,save:SAVE,x:P&&P.x}},tap:function(){uiTap(-1,-1,true)},
  unlock:function(n){SAVE.unlocked=n;save()},reset:function(){localStorage.removeItem(SAVEKEY);location.reload()},solveAll:function(){L.quizzes.forEach(function(q){openQuiz(q,true)});L.doors.forEach(function(d){openDoor(d,true)})},
