@@ -9,8 +9,8 @@ Five zones, each with a boss that grants a new power:
 4. Frozen Dark — Frosty Yeti → Fireball (burn wooden barriers)
 5. Lava Core — King Magmor (3 phases) · rescue **Dad** · Lava Chicken!
 
-Checkpoints, 5 hearts, no permanent loss, progress saved locally. All sounds are synthesized with WebAudio.
+Checkpoints, 5 hearts, no permanent loss, progress saved locally. Jump, collect, stomp and UI sounds use recorded samples (with a synth fallback). Original looping music ducks under praise voice lines.
 Build: `python3 src/build.py` (inlines src/game.js into index.html). Test: `python3 src/test.py` (Playwright WebKit).
 
-## Treasure doors (v1.4, Nov 2026)
-Math puzzles no longer block the path. Each one is now an optional **treasure chest**: the main path is always open, and bonking or tapping the right answer opens the chest for +6 bonus gems and a secret heart. Wrong answers just say "Try again!".
+## Treasure chests
+Optional bonus treasure chests sit beside the path — no puzzles, no numbers. Bonk them from below, jump on the lid, or tap them to burst out bonus gems and a secret heart.

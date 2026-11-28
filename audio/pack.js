@@ -1,4 +1,4 @@
-/* kids-audio pack player v20261120el2
+/* kids-audio pack player v20261127duck
    Pre-generated ElevenLabs voice + shared SFX.
    KVX.init({base:'audio/', getCtx, musicGain, kid:'alex'|'zoe'})
    KVX.say(key) / KVX.sayAny(keys) / KVX.count(n) / KVX.sfx(name)
@@ -64,8 +64,8 @@
   function duck(on){
     g.__kvxSpk=!!on; ensureSpkWrap();
     const m=getMusic(); if(!m||!m.gain||!C) return;
-    const t=C.currentTime, g=m.gain;
-    try{ g.cancelScheduledValues(t); g.setTargetAtTime(on?0.3:1, t, on?0.04:0.2); }catch(e){}
+    const t=C.currentTime, mg=m.gain;
+    try{ mg.cancelScheduledValues(t); mg.setTargetAtTime(on?0.3:1, t, on?0.04:0.2); }catch(e){}
   }
   function playBuf(b, bus, stopPrev){
     if(!b||!C||!bus) return null;
