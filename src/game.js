@@ -1,3 +1,100 @@
+/*KFX-BEGIN*/
+/* kfx.js v1 - recorded sound effects for the Wilson kids' games.
+   One AAC sprite (audio/fx/fx.m4a + fx.json) of CC0 recordings (Kenney, OpenGameArt, Freesound CC0; see CREDITS-AUDIO.md).
+   KFX.init({ctx:()=>AudioContext, out:()=>node, base:'audio/fx/', v:'ver', muted:()=>bool, duck:(depth,ms)=>{}})
+   KFX.play('coin',{vol,rate})   KFX.bind(SFX,{gameName:'bankName'|['bankName',{opts}]|fn(args)->spec},{ok:fn})
+   Keeps polyphony low (global + per-sound caps), gaps repeated triggers, varies pitch a little and never repeats the same take twice. */
+(function(W){'use strict';
+var K=W.KFX={stats:{play:0,drop:0,steal:0,decoded:0,err:0},ready:false};
+var cfg={max:6},C=null,bus=null,ab=null,buf=null,idx=null,idxP=null,fetching=false,decoding=false,live=[],tlast={},lastI={},unlockedOnce=false;
+var TONAL={chime:1,bell:1,star:1,correct:1,sparkle:1,magic:1,gem:1,coin:1,coins:1,pickup:1,power:1,shield:1,drip:1};
+var JING={win:1,fanfare:1,levelup:1,sting:1,sad:1,fail:1,cheer:1,wow:1,airhorn:1,boom:1,roar:1,firework:1,rumble:1,stomp:1};
+function prof(n){
+  if(JING[n])return{gap:350,conc:1,jit:n==='boom'||n==='roar'||n==='stomp'?0.04:0,duck:n==='boom'||n==='stomp'||n==='rumble'?0.55:0.45,pri:3};
+  if(TONAL[n])return{gap:70,conc:n==='coin'?3:2,jit:0.025,pri:2};
+  if(n==='click'||n==='tap'||n==='tick'||n==='back'||n==='toggle'||n==='swipe'||n==='pop'||n==='squeak'||n==='pat'||n==='rustle')return{gap:55,conc:2,jit:0.06,pri:1};
+  return{gap:80,conc:2,jit:0.05,pri:2};
+}
+function getC(){var c=null;try{c=cfg.ctx&&cfg.ctx()}catch(e){}if(c!==C){C=c;bus=null}return C}
+function mkBus(){
+  if(bus||!C)return bus;
+  try{
+    bus=C.createGain();bus.gain.value=cfg.gain==null?0.9:cfg.gain;
+    var comp=C.createDynamicsCompressor();comp.threshold.value=-14;comp.knee.value=8;comp.ratio.value=6;comp.attack.value=0.003;comp.release.value=0.14;
+    bus.connect(comp);var o=typeof cfg.out==='function'?cfg.out():cfg.out;comp.connect(o||C.destination);
+  }catch(e){bus=null}
+  return bus;
+}
+function fetchSprite(){
+  if(fetching||!cfg.base)return;fetching=true;var q=cfg.v?('?v='+cfg.v):'';
+  try{
+    fetch(cfg.base+'fx.json'+q).then(function(r){return r.json()}).then(function(j){idx=j}).catch(function(){K.stats.err++});
+    fetch(cfg.base+'fx.m4a'+q).then(function(r){return r.arrayBuffer()}).then(function(a){ab=a;K.warm()}).catch(function(){K.stats.err++});
+  }catch(e){K.stats.err++}
+}
+K.warm=function(){
+  getC();if(!C||buf||decoding||!ab)return;decoding=true;
+  var done=function(b){decoding=false;if(b){buf=b;K.ready=true;K.stats.decoded=1}else K.stats.err++};
+  try{var p=C.decodeAudioData(ab.slice(0),done,function(){done(null)});if(p&&p.catch)p.catch(function(){})}catch(e){decoding=false}
+};
+K.init=function(o){
+  for(var k in o)cfg[k]=o[k];
+  fetchSprite();
+  if(!unlockedOnce){unlockedOnce=true;
+    ['pointerdown','touchend','click','keydown'].forEach(function(ev){W.addEventListener(ev,K.kick,{capture:true,passive:true})});
+    document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(K.kick,60)});
+    W.addEventListener('pageshow',function(){setTimeout(K.kick,60)});
+  }
+};
+/* gesture/visibility: make sure the context is running and the sprite is decoded (iOS needs resume() inside a tap) */
+K.kick=function(){getC();if(!C)return;try{if(C.state!=='running'&&!document.hidden){var p=C.resume();p&&p.catch&&p.catch(function(){})}}catch(e){}K.warm()};
+function pick(n,len){
+  if(len<2)return 0;var i,t=0;do{i=(Math.random()*len)|0}while(i===lastI[n]&&++t<6);lastI[n]=i;return i}
+K.play=function(name,o){
+  o=o||{};getC();
+  if(!C||C.state!=='running'||document.hidden)return false;
+  if(cfg.muted&&cfg.muted())return false;
+  if(!buf||!idx){K.warm();return false}
+  var v=idx[name];if(!v||!v.length){K.stats.miss=(K.stats.miss||0)+1;return false}
+  mkBus();if(!bus)return false;
+  var P=prof(name),t=C.currentTime;
+  if(t-(tlast[name]||-9)<P.gap/1000){K.stats.drop++;return false}
+  live=live.filter(function(x){return x.end>t});
+  var same=live.filter(function(x){return x.name===name});
+  if(same.length>=P.conc)steal(same[0],t);
+  if(live.length>=(cfg.max||6)){var lo=live[0];for(var i=1;i<live.length;i++)if(live[i].pri<lo.pri||(live[i].pri===lo.pri&&live[i].t0<lo.t0))lo=live[i];
+    if(lo.pri>P.pri){K.stats.drop++;return false}steal(lo,t)}
+  var seg=v[pick(name,v.length)],rate=(o.rate||1)*(1+(Math.random()*2-1)*(o.jit==null?P.jit:o.jit));
+  var s=C.createBufferSource(),g=C.createGain();s.buffer=buf;s.playbackRate.value=rate;
+  g.gain.value=(o.vol==null?1:o.vol);s.connect(g);g.connect(bus);
+  try{s.start(t,seg[0],seg[1])}catch(e){return false}
+  var rec={name:name,s:s,g:g,t0:t,end:t+seg[1]/rate+0.03,pri:P.pri};live.push(rec);
+  s.onended=function(){try{g.disconnect()}catch(e){}};
+  tlast[name]=t;K.stats.play++;
+  if(P.duck&&cfg.duck&&!o.noduck){try{cfg.duck(P.duck,seg[1]/rate*1000)}catch(e){}}
+  return true;
+};
+function steal(x,t){try{x.g.gain.cancelScheduledValues(t);x.g.gain.setTargetAtTime(0,t,0.008);x.s.stop(t+0.05)}catch(e){}x.end=t;K.stats.steal++}
+/* bind(SFX, MAP, {ok}) - replace the game's synth effects with recordings; unmapped names keep their old behavior */
+K.bind=function(SFX,MAP,opt){
+  opt=opt||{};var bound=[];
+  Object.keys(MAP).forEach(function(k){
+    if(!(k in SFX))return;var m=MAP[k];
+    SFX[k]=function(){
+      try{
+        if(opt.ok&&!opt.ok())return;
+        var spec=typeof m==='function'?m.apply(null,arguments):m;if(!spec)return;
+        if(typeof spec==='string')K.play(spec);
+        else if(spec instanceof Array)K.play(spec[0],spec[1]);
+        else if(spec.n)K.play(spec.n,spec);
+      }catch(e){}
+    };bound.push(k);
+  });
+  K.bound=(K.bound||[]).concat(bound);return bound;
+};
+})(window);
+
+/*KFX-END*/
 (function(){
 "use strict";
 var TS=48,ROWS=12,WH=ROWS*TS;
@@ -82,7 +179,7 @@ var LEVELS=[
 function rnd(a,b){return a+Math.floor(Math.random()*(b-a+1))}
 // ---------- audio (real KVX samples, synth fallback) ----------
 var AC=null,lastS={},voices=0,jingleUntil=0,muted=false;
-function ac(){try{if(!AC){var A=window.AudioContext||window.webkitAudioContext;if(!A)return null;AC=new A();AC.addEventListener('statechange',function(){if(AC.state==='interrupted')setTimeout(wake,300)})}if(AC.state!=='running'&&AC.state!=='closed'){var p=AC.resume();if(p&&p.catch)p.catch(function(){})}}catch(e){}return AC}
+function ac(){try{if(!AC){var A=window.AudioContext||window.webkitAudioContext;if(!A)return null;AC=new A();try{var lim=AC.createDynamicsCompressor();lim.threshold.value=-2;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.002;lim.release.value=0.12;lim.connect(AC.destination);AC._out=lim}catch(e){AC._out=AC.destination}try{KFX.init({ctx:function(){return AC},out:function(){return AC._out||AC.destination},muted:function(){return muted},base:'audio/fx/',v:'20261128audio',gain:1.0,duck:function(d,ms){try{if(window.BGM&&BGM.duck)BGM.duck(d,ms)}catch(e){}}})}catch(e){}AC.addEventListener('statechange',function(){if(AC.state==='interrupted')setTimeout(wake,300)})}if(AC.state!=='running'&&AC.state!=='closed'){var p=AC.resume();if(p&&p.catch)p.catch(function(){})}}catch(e){}return AC}
 // iOS: resume after an 'interrupted' state (call, Siri, background) on any touch or when the page comes back
 function wake(){if(AC&&!document.hidden&&AC.state!=='running'&&AC.state!=='closed'){try{var p=AC.resume();if(p&&p.catch)p.catch(function(){})}catch(e){}}}
 addEventListener('pageshow',wake);addEventListener('focus',wake);document.addEventListener('visibilitychange',function(){if(!document.hidden)wake()});
@@ -90,15 +187,17 @@ addEventListener('pageshow',wake);addEventListener('focus',wake);document.addEve
 function tone(f,d,type,vol,f2,del){var a=ac();if(!a||muted)return;var t=a.currentTime+(del||0),o=a.createOscillator(),g=a.createGain();
  o.type=type||'square';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);
  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol||.15,t+.01);g.gain.exponentialRampToValueAtTime(0.0001,t+d);
- o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.05)}
+ o.connect(g);g.connect(a._out||a.destination);o.start(t);o.stop(t+d+.05)}
 var NB=null;function noise(d,vol,ff,del,ff2){var a=ac();if(!a||muted)return;if(!NB){NB=a.createBuffer(1,a.sampleRate,a.sampleRate);var c=NB.getChannelData(0);for(var i=0;i<c.length;i++)c[i]=Math.random()*2-1}
  var t=a.currentTime+(del||0),s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();s.buffer=NB;s.loop=true;f.type='lowpass';f.frequency.setValueAtTime(ff||1200,t);if(ff2)f.frequency.exponentialRampToValueAtTime(ff2,t+d);
- g.gain.setValueAtTime(vol||.2,t);g.gain.exponentialRampToValueAtTime(0.0001,t+d);s.connect(f);f.connect(g);g.connect(a.destination);s.start(t);s.stop(t+d+.05)}
+ g.gain.setValueAtTime(vol||.2,t);g.gain.exponentialRampToValueAtTime(0.0001,t+d);s.connect(f);f.connect(g);g.connect(a._out||a.destination);s.start(t);s.stop(t+d+.05)}
 function kvxSfx(name){try{if(window.KVX){KVX.sfx(name);return true}}catch(e){}return false}
 function praise(kind){try{if(window.KVX)KVX.praise(kind)}catch(e){}}
 var SMAP={jump:'jump',dj:'boing',gem:'collect',hurt:'thud',stomp:'thud',dash:'whoosh',fire:'whoosh',boom:'thud',roar:'thud',door:'star',wrong:'wrong',bhit:'pop',heart:'sparkle',cp:'ui_click',bounce:'boing',break:'thud',land:'land'};
+var KMAP={jump:'jump',dj:['boing',{vol:.8}],gem:'coin',hurt:'hurt',stomp:'stomp',dash:['whoosh',{vol:.8}],fire:['zap',{vol:.7}],boom:'boom',roar:'roar',door:'star',wrong:'wrong',bhit:'bonk',heart:'chime',cp:'correct',bounce:'boing',break:['thud',{rate:.9}],land:['land',{vol:.8}]};
+function kfxSfx(n){var m=KMAP[n];if(!m)return false;if(!AC||AC.state!=='running')return false;try{return typeof m==='string'?KFX.play(m):KFX.play(m[0],m[1])||true}catch(e){return false}}
 function sfx(n){var now=performance.now();if(now<jingleUntil&&n!=='hurt')return;if(lastS[n]&&now-lastS[n]<(n==='gem'?60:140))return;if(voices>=4)return;lastS[n]=now;voices++;setTimeout(function(){voices--},250);
- if(kvxSfx(SMAP[n]||n))return;
+ if(kfxSfx(n))return;if(kvxSfx(SMAP[n]||n))return;
  switch(n){case'jump':tone(320,.15,'square',.08,640);break;case'dj':tone(480,.15,'square',.08,960);break;
  case'gem':tone(1320,.08,'triangle',.12);tone(1760,.12,'triangle',.1,0,.06);break;case'hurt':tone(300,.25,'sawtooth',.1,90);break;
  case'stomp':case'land':tone(200,.12,'square',.12,80);noise(.1,.15,800);break;case'dash':noise(.25,.2,3000,0,300);break;
@@ -107,8 +206,8 @@ function sfx(n){var now=performance.now();if(now<jingleUntil&&n!=='hurt')return;
  case'wrong':tone(220,.15,'square',.08);tone(180,.2,'square',.08,0,.15);break;case'bhit':tone(700,.1,'square',.12,200);noise(.15,.2,1500);break;
  case'heart':tone(660,.1,'triangle',.12);tone(990,.15,'triangle',.12,0,.1);break;case'cp':tone(523,.1,'triangle',.1);tone(659,.1,'triangle',.1,0,.1);tone(784,.15,'triangle',.1,0,.2);break;
  case'bounce':tone(200,.25,'sine',.2,900);break;case'break':noise(.3,.3,1500,0,200);break}}
-function fanfare(){var now=performance.now();if(now<jingleUntil)return;jingleUntil=now+1800;if(kvxSfx('win'))return;var N=[523,659,784,1047,784,1047];N.forEach(function(f,i){tone(f,i===5?.6:.16,'square',.09,0,i*.16)})}
-function lavaChickenJingle(){var now=performance.now();if(now<jingleUntil)return;jingleUntil=now+2400;
+function fanfare(){var now=performance.now();if(now<jingleUntil)return;jingleUntil=now+1800;if(AC&&AC.state==='running'&&KFX.play('fanfare'))return;if(kvxSfx('win'))return;var N=[523,659,784,1047,784,1047];N.forEach(function(f,i){tone(f,i===5?.6:.16,'square',.09,0,i*.16)})}
+function lavaChickenJingle(){var now=performance.now();if(now<jingleUntil)return;jingleUntil=now+2400;if(AC&&AC.state==='running'&&KFX.play('fanfare')){[0.62,0.74,1.55,1.67].forEach(function(d){setTimeout(function(){KFX.play('quack',{rate:1.5,vol:.8})},d*1000)});return}
  // original chant-like tune: "La-va Chick-en!" then two clucks, repeated higher
  var N=[[392,.14],[440,.14],[523,.14],[523,.3],[0,.12],[587,.14],[659,.14],[784,.14],[784,.36]],t=0;
  N.forEach(function(n){if(n[0])tone(n[0],n[1],'square',.1,0,t);t+=n[1]});
